@@ -119,6 +119,10 @@ end
 #### OPTIMIZE HELPERS ####
 ##########################
 
+function parallel_setup()
+    include((@__DIR__) * Base.Filesystem.path_separator * "parallel_setup.jl")
+end
+
 function optimize_all_observations(ensemble, p0s, iteration::Int, output_path::String; n_cores::Int, verbose::Bool)
             
     # Timer
@@ -129,7 +133,7 @@ function optimize_all_observations(ensemble, p0s, iteration::Int, output_path::S
 
     if n_cores > 1
         addprocs(n_cores)
-        include((@__DIR__) * Base.Filesystem.path_separator * "parallel_setup.jl")
+        parallel_setup()
         opt_results = pmap(1:length(ensemble.data)) do i
             optimize_and_plot_observation(p0s[i], ensemble.data[i], ensemble.model, ensemble.obj, iteration, output_path)
         end
