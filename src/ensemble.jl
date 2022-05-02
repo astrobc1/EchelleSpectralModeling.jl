@@ -19,6 +19,9 @@ function IterativeSpectralRVEnsembleProblem(;spectrograph, data_input_path, file
         data_input_path *= Base.Filesystem.path_separator
     end
     data = [SpecData1d(data_input_path * fname, spectrograph, model.sregion) for fname ∈ eachline(data_input_path * filelist)]
+    jds = [parse_exposure_start_time(d) for d ∈ data]
+    ss = sortperm(jds)
+    data .= data[ss]
     return IterativeSpectralRVEnsembleProblem(data, model, obj)
 end
 
