@@ -10,7 +10,7 @@ include("spectralmodel.jl")
 
 include("modelcomponent.jl")
 
-include("continuum/Continuum.jl")
+include("continuum/continuum.jl")
 @reexport using .Continuum
 include("gascell/gascells.jl")
 @reexport using .GasCells
