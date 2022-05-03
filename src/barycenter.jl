@@ -1,6 +1,5 @@
 using PyCall
 using AstroTime
-using Infiltrator
 using EchelleBase
 
 export compute_barycentric_corrections

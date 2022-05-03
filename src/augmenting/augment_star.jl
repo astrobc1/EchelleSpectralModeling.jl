@@ -1,6 +1,5 @@
 using EchelleBase
 using EchelleSpectralModeling
-using Infiltrator
 
 export augment_star!
 

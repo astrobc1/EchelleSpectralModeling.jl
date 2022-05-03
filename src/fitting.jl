@@ -119,30 +119,15 @@ end
 #### OPTIMIZE HELPERS ####
 ##########################
 
-function parallel_setup()
-    include((@__DIR__) * Base.Filesystem.path_separator * "parallel_setup.jl")
-end
-
-function optimize_all_observations(ensemble, p0s, iteration::Int, output_path::String; n_cores::Int, verbose::Bool)
+function optimize_all_observations(ensemble, p0s, iteration::Int, output_path::String; verbose::Bool)
             
     # Timer
     ti = time()
 
     # Opt results (vector of named tuples)
     opt_results = NamedTuple[]
-
-    if n_cores > 1
-        addprocs(n_cores)
-        parallel_setup()
-        opt_results = pmap(1:length(ensemble.data)) do i
-            optimize_and_plot_observation(p0s[i], ensemble.data[i], ensemble.model, ensemble.obj, iteration, output_path)
-        end
-        rmprocs(workers())
-    else
-        for i=1:length(ensemble.data)
-            opt_result = optimize_and_plot_observation(p0s[i], ensemble.data[i], ensemble.model, ensemble.obj, iteration, output_path)
-            push!(opt_results, opt_result)
-        end
+    opt_results = pmap(1:length(ensemble.data)) do i
+        optimize_and_plot_observation(p0s[i], ensemble.data[i], ensemble.model, ensemble.obj, iteration, output_path)
     end
 
     println("Finished Iteration $(iteration) in $(round((time() - ti) / 60, sigdigits=3)) min")
