@@ -13,7 +13,7 @@ export compute_rvs
 
 const PATHSEP = Base.Filesystem.path_separator
 
-function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, tag, n_cores::Int=1, n_iterations::Int, do_ccf::Bool, verbose::Bool=false)
+function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, tag, n_iterations::Int, do_ccf::Bool, verbose::Bool=false)
 
     # Start the main clock!
     time_start_main = time()
@@ -58,7 +58,7 @@ function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, 
         if iteration == 1 && isnothing(ensemble.model.star.input_file)
             
             # Fit all observations
-            _opt_results = optimize_all_observations(ensemble, p0s, iteration, output_path; n_cores=n_cores, verbose=verbose)
+            _opt_results = optimize_all_observations(ensemble, p0s, iteration, output_path; verbose=verbose)
             push!(opt_results, _opt_results)
             
             # Augment the template
@@ -74,7 +74,7 @@ function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, 
             end
 
             # Run the fit for all spectra and do a cross correlation analysis as well.
-            _opt_results = optimize_all_observations(ensemble, p0s, iteration, output_path; n_cores=n_cores, verbose=verbose)
+            _opt_results = optimize_all_observations(ensemble, p0s, iteration, output_path; verbose=verbose)
             push!(opt_results, _opt_results)
         
             # Store and plot rvs
@@ -125,7 +125,6 @@ function optimize_all_observations(ensemble, p0s, iteration::Int, output_path::S
     ti = time()
 
     # Opt results (vector of named tuples)
-    opt_results = NamedTuple[]
     opt_results = pmap(1:length(ensemble.data)) do i
         optimize_and_plot_observation(p0s[i], ensemble.data[i], ensemble.model, ensemble.obj, iteration, output_path)
     end
