@@ -155,7 +155,12 @@ function optimize_observation(p0, data, model, obj, iteration; verbose=true)
 
     # Fit
     obj_wrapper = (pars) -> compute_obj(obj, pars, data, model)
-    opt_result = IterativeNelderMead.optimize(IterativeNelderMeadOptimizer(), p0, obj_wrapper)
+
+    try
+        opt_result = IterativeNelderMead.optimize(IterativeNelderMeadOptimizer(), p0, obj_wrapper)
+    catch
+        opt_result = (;pbest=p0, fbest=NaN, fcalls=0)
+    end
 
     # Print results
     println("Fit observation $(data), Iteration $iteration, $(label(model.sregion)) in $(round((time() - ti) / 60, digits=3)) min")
