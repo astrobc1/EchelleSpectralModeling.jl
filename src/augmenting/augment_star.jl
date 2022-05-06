@@ -25,6 +25,10 @@ function augment_star!(ensemble, opt_results)
     # Loop over spectra
     for i=1:length(ensemble)
 
+        if !isfinite(opt_results[i].fbest) && opt_results[i].fbest < 100
+            continue
+        end
+
         # Best fit pars
         pars = opt_results[i].pbest
     
