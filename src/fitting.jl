@@ -155,7 +155,7 @@ function optimize_observation(p0, data, model, obj, iteration; verbose=true)
 
     # Fit
     obj_wrapper = (pars) -> compute_obj(obj, pars, data, model)
-    opt_result = nothing
+    opt_result = (;pbest=p0, fbest=NaN, fcalls=0)
 
     try
         opt_result = IterativeNelderMead.optimize(IterativeNelderMeadOptimizer(), p0, obj_wrapper)
