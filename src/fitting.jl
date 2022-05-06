@@ -139,11 +139,11 @@ end
 
 function optimize_and_plot_observation(p0, data, model, obj, iteration, output_path)
     opt_result = optimize_observation(p0, data, model, obj, iteration)
-    #try
+    try
         plot_spectrum_fit(data, model, opt_result.pbest, iteration, output_path)
-    #catch
-    #    nothing
-    #end
+    catch
+        nothing
+    end
     return opt_result
 end
 
