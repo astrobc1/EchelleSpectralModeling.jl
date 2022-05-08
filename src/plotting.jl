@@ -139,7 +139,7 @@ function plot_rvs(ensemble, rvs, iteration, output_path; time_offset=2450000)
     plt.tight_layout()
     
     # Save
-    fname = output_path * label(ensemble.model.sregion) * PATHSEP * "RVs" * PATHSEP * "$(label(ensemble.model.sregion))_iter$(iteration).png"
+    fname = output_path * label(ensemble.model.sregion) * PATHSEP * "RVs" * PATHSEP * "rvs_$(label(ensemble.model.sregion))_iter$(iteration).png"
     savefig(fname)
     plt.close()
 end

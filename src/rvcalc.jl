@@ -131,7 +131,7 @@ const SPEED_OF_LIGHT_MPS = 299792458.0
 #### RV INFO CONTENT ####
 #########################
 
-function compute_rv_content(model::SpectralForwardModel, pars; snr=100)
+function compute_rv_content(model::SpectralForwardModel, pars::Parameters; snr=100)
 
     # Data wave grid
     data_λ = build(model.λsolution, pars)
@@ -279,7 +279,7 @@ end
 #### CO-ADDING RVS ####
 #######################
 
-function combine_relative_rvs(bjds::Vector{Float64}, rvs::Vector{Float64}, weights::Vector{Float64}, indices)
+function combine_relative_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weights::Matrix{Float64}, indices::Vector{Float64})
 
     # Numbers
     n_chunks, n_spec = size(rvs)
@@ -317,7 +317,7 @@ function combine_relative_rvs(bjds::Vector{Float64}, rvs::Vector{Float64}, weigh
     return rvs_single_out, unc_single_out, t_binned_out, rvs_binned_out, unc_binned_out
 end
 
-function bin_rvs_single_order(rvs, weights, indices)
+function bin_rvs_single_order(rvs::Vector{Float64}, weights::Vector{Float64}, indices::Vector{Float64})
 
     # The number of spectra and nights
     n_spec = length(rvs)
@@ -338,7 +338,7 @@ function bin_rvs_single_order(rvs, weights, indices)
     return rvs_binned, unc_binned
 end
 
-function align_chunks(rvs, weights)
+function align_chunks(rvs::Matrix{Float64}, weights::Matrix{Float64})
 
     n_chunks, n_spec = size(rvs)
     
@@ -367,7 +367,7 @@ function align_chunks(rvs, weights)
     return rvli, wli
 end
 
-function bin_jds(jds; sep=0.5, utc_offset=-8)
+function bin_jds(jds::Vector{Float64}; sep=0.5, utc_offset=-8)
     
     # Number of spectra
     n_obs_tot = length(jds)

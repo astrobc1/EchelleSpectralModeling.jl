@@ -1,5 +1,6 @@
 using EchelleBase
 using EchelleSpectralModeling
+using NaNStatistics
 
 export augment_star!
 
@@ -14,7 +15,8 @@ function augment_star!(ensemble, opt_results)
     
     # Weights according to fit metric
     rms_weights = 1 ./ rmss.^2
-    bad = findall(rms_weights .< 10)
+    med_rms = nanmedian(rmss)
+    bad = findall(rmss .> 10 * med_rms)
     rms_weights[bad] .= 0
     
     # Storage arrays
@@ -57,7 +59,7 @@ function augment_star!(ensemble, opt_results)
                 if !isnothing(ensemble.model.lsf)
                     kernel = build(ensemble.model.lsf, ensemble.model.templates["λrel"])
                     tell_flux .= maths.convolve1d(tell_flux, kernel)
-                    tell_flux ./= maths.nanmax(tell_flux)
+                    tell_flux ./= nanmaximum(tell_flux)
                 end
                 bad = findall(tell_flux .< 0.99)
                 weights_lr[bad] .= 0

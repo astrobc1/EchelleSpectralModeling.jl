@@ -38,9 +38,37 @@ function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, 
 
     # Get initial parameters
     p0s = get_init_parameters(ensemble)
+    p0scp = deepcopy(p0s)
 
     # Load templates
     load_templates(ensemble)
+
+    # Check which tellurics we need
+    if !isnothing(ensemble.model.tellurics) && ensemble.model.tellurics isa TAPASTellurics
+        if !isnothing(ensemble.model.lsf)
+            kernel = build(ensemble.model.lsf, p0s[1], ensemble.model.templates)
+            use_water = has_water_features(ensemble.model.tellurics, ensemble.model.templates, kernel)
+            use_airmass = has_airmass_features(ensemble.model.tellurics, ensemble.model.templates, kernel)
+        else
+            use_water = has_water_features(ensemble.model.tellurics, ensemble.model.templates)
+            use_airmass = has_airmass_features(ensemble.model.tellurics, ensemble.model.templates)
+        end
+        if ~use_water
+            for p0 ∈ p0s
+                p0["water_depth"] = Parameter(value=1, lower_bound=1, upper_bound=1)
+            end
+        end
+        if ~use_airmass
+            for p0 ∈ p0s
+                p0["airmass_depth"] = Parameter(value=1, lower_bound=1, upper_bound=1)
+            end
+        end
+        if ~use_water && ~use_airmass
+            for p0 ∈ p0s
+                p0["vel_tel"] = Parameter(value=0, lower_bound=0, upper_bound=0)
+            end
+        end
+    end
 
     # Stellar templates
     stellar_templates = zeros(length(ensemble.model.templates["λ"]), n_iterations + 1)
@@ -56,6 +84,11 @@ function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, 
         
         # Flat stellar template
         if iteration == 1 && isnothing(ensemble.model.star.input_file)
+
+            # Fix stellar rv
+            for p0 ∈ p0s
+                p0["vel_star"] = Parameter(value=0, lower_bound=0, upper_bound=0)
+            end
             
             # Fit all observations
             _opt_results = optimize_all_observations(ensemble, p0s, iteration, output_path; verbose=verbose)
@@ -71,6 +104,13 @@ function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, 
             # Starting parameters
             if iteration > 1
                 p0s = [res.pbest for res ∈ opt_results[end]]
+            end
+
+            # Fix stellar rv
+            if iteration == 2 && isnothing(ensemble.model.star.input_file)
+                for i=1:length(p0s)
+                    p0s[i]["vel_star"] = p0scp[i]["vel_star"]
+                end
             end
 
             # Run the fit for all spectra and do a cross correlation analysis as well.

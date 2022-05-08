@@ -1,6 +1,7 @@
 using EchelleBase
 using EchelleSpectralModeling
 using NPZ
+using NaNStatistics
 
 export TAPASTellurics, has_water_features, has_airmass_features
 
@@ -27,8 +28,22 @@ function EchelleSpectralModeling.build(m::TAPASTellurics, λ, flux_water, flux_a
     return maths.doppler_shift_flux(λ, flux, vel)
 end
 
-has_water_features(m::TAPASTellurics, pars, templates) = any(templates["tellurics"][:, 1] .< 1 - m.min_feature_depth)
-has_airmass_features(m::TAPASTellurics, templates) = any(templates["tellurics"][:, 2] .< 1 - m.min_feature_depth)
+function has_water_features(m::TAPASTellurics, templates, kernel=nothing)
+    flux = templates["tellurics"][:, 1]
+    if !isnothing(kernel)
+        flux .= maths.convolve1d(flux, kernel)
+        flux ./= nanmaximum(flux)
+    end
+    return any(flux .< 1 - m.min_feature_depth)
+end
+function has_airmass_features(m::TAPASTellurics, templates, kernel=nothing)
+    flux = templates["tellurics"][:, 2]
+    if !isnothing(kernel)
+        flux .= maths.convolve1d(flux, kernel)
+        flux ./= nanmaximum(flux)
+    end
+    return any(flux .< 1 - m.min_feature_depth)
+end
 
 function _load_template(input_file::String, λ_out)
 
