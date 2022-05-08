@@ -10,14 +10,14 @@ function augment_star!(ensemble, opt_results)
     star_λ = ensemble.model.templates["λ"]
     star_flux = copy(ensemble.model.templates["star"])
     
-    # Get the RMS values
-    rmss = [opt_results[i].fbest for i=1:length(ensemble)]
+    # Get the fit values
+    fit_metrics = [opt_results[i].fbest for i=1:length(ensemble)]
     
     # Weights according to fit metric
-    rms_weights = 1 ./ rmss.^2
-    med_rms = nanmedian(rmss)
-    bad = findall(rmss .> 10 * med_rms)
-    rms_weights[bad] .= 0
+    fit_weights = 1 ./ abs(fit_metrics).^2
+    med_fit_metric = nanmedian(fit_metrics)
+    bad = findall(fit_metrics .> 10 * med_fit_metric)
+    fit_weights[bad] .= 0
     
     # Storage arrays
     nx = length(star_λ)
@@ -50,7 +50,7 @@ function augment_star!(ensemble, opt_results)
             end
             λ_star_rest = maths.doppler_shift_λ(data_λ , vel)
             residuals[:, i] .= maths.cspline_interp(λ_star_rest, residuals_lr, star_λ)
-            weights_lr = ensemble.data[i].data.mask .* rms_weights[i]
+            weights_lr = ensemble.data[i].data.mask .* fit_weights[i]
 
             # Telluric mask
             if !isnothing(ensemble.model.tellurics) && hasproperty(ensemble.model.tellurics, :mask) && ensemble.model.tellurics.mask
