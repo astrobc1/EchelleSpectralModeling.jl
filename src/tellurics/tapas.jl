@@ -1,6 +1,7 @@
 using EchelleBase
 using EchelleSpectralModeling
 using NPZ
+
 using NaNStatistics
 
 export TAPASTellurics, has_water_features, has_airmass_features, get_mask
@@ -61,7 +62,7 @@ function _load_template(input_file::String, λ_out)
     nx = length(λ_out)
     templates = ones(nx, 2)
     templates[:, 1] .= maths.cspline_interp(λ, flux_water, λ_out)
-    templates[:, 1] .= maths.weighted_median(templates[:, 1], p=0.999)
+    templates[:, 1] ./= maths.weighted_median(templates[:, 1], p=0.999)
     
     # Remaining do in a loop
     for species ∈ keys(template_raw)
@@ -70,6 +71,7 @@ function _load_template(input_file::String, λ_out)
             templates[:, 2] .*= maths.cspline_interp(λ, flux, λ_out)
         end
     end
+    templates[:, 2] ./= maths.weighted_median(templates[:, 2], p=0.999)
     return templates
 end
 
