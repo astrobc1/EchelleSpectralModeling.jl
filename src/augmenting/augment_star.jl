@@ -14,7 +14,7 @@ function augment_star!(ensemble, opt_results)
     fit_metrics = [opt_results[i].fbest for i=1:length(ensemble)]
     
     # Weights according to fit metric
-    fit_weights = 1 ./ abs(fit_metrics).^2
+    fit_weights = 1 ./ abs.(fit_metrics).^2
     med_fit_metric = nanmedian(fit_metrics)
     bad = findall(fit_metrics .> 10 * med_fit_metric)
     fit_weights[bad] .= 0
@@ -27,7 +27,7 @@ function augment_star!(ensemble, opt_results)
     # Loop over spectra
     for i=1:length(ensemble)
 
-        if !isfinite(opt_results[i].fbest) && opt_results[i].fbest < 100
+        if !isfinite(opt_results[i].fbest)
             continue
         end
 
