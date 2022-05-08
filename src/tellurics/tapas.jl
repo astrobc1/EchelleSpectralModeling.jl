@@ -3,7 +3,7 @@ using EchelleSpectralModeling
 using NPZ
 using NaNStatistics
 
-export TAPASTellurics, has_water_features, has_airmass_features
+export TAPASTellurics, has_water_features, has_airmass_features, get_mask
 
 struct TAPASTellurics <: SpectralModelComponent
     input_file::String
@@ -83,4 +83,20 @@ function EchelleSpectralModeling.get_init_parameters(m::TAPASTellurics, data, sr
     pars["airmass_depth"] = Parameter(value=m.airmass_depth_guess[2], lower_bound=m.airmass_depth_guess[1], upper_bound=m.airmass_depth_guess[3])
     pars["vel_tel"] = Parameter(value=m.vel_guess[2], lower_bound=m.vel_guess[1], upper_bound=m.vel_guess[3])
     return pars
+end
+
+function get_mask(m::TAPASTellurics, pars, templates, kernel=nothing, λ_out=nothing)
+    tell_flux = build(m, pars, templates)
+    if !isnothing(kernel)
+        tell_flux .= maths.convole1d(tell_flux, kernel)
+        tell_flux ./= nanmaximum(tell_flux)
+    end
+    if isnothing(λ_out)
+        λ_out = templates["λ"]
+    end
+    tell_flux = maths.cspline_interp(templates["λ"], tell_flux, λ_out)
+    mask = zeros(length(tell_flux))
+    good = findall(tell_flux .> m.min_feature_depth)
+    mask[good] .= 1
+    return mask
 end
