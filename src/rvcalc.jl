@@ -1,8 +1,12 @@
 using EchelleBase
 using EchelleSpectralModeling
 using DataInterpolations
+using Infiltrator
+using Calculus
+using Statistics
+using NaNStatistics
 
-export bin_rvs_single_order
+export bin_rvs_single_order, combine_relative_rvs, compute_rv_content, bin_jds, combine_rvs
 
 const SPEED_OF_LIGHT_MPS = 299792458.0
 
@@ -131,21 +135,21 @@ const SPEED_OF_LIGHT_MPS = 299792458.0
 #### RV INFO CONTENT ####
 #########################
 
-function compute_rv_content(model::SpectralForwardModel, pars::Parameters; snr=100)
+function compute_rv_content(model::SpectralForwardModel, pars::Parameters, data::SpecData1d; snr=100)
 
     # Data wave grid
-    data_λ = build(model.λsolution, pars)
+    data_λ = build(model.λsolution, data, pars, model.sregion)
 
     # Model wave grid
-    λhr = model.templates["λhr"]
+    λhr = model.templates["λ"]
 
     # Star flux on model data wave grid
     star_flux = build(model.star, pars, model.templates)
 
     # Convolve stellar flux
     if !isnothing(model.lsf)
-        kernel = build(model.lsf, pars)
-        star_flux = maths.convolve1d(star_flux, kernel)
+        kernel = build(model.lsf, pars, model.templates)
+        star_flux .= maths.convolve1d(star_flux, kernel)
     end
     
     # Interpolate star flux onto data grid
@@ -153,13 +157,13 @@ function compute_rv_content(model::SpectralForwardModel, pars::Parameters; snr=1
 
     # Gas cell flux on model wave grid for kth observation
     if !isnothing(model.gascell)
-        gas_flux = build(model.gascell, pars, model.templates["gascell"], λhr)
+        gas_flux = build(model.gascell, pars, model.templates)
         if !isnothing(model.lsf)
-            gas_flux = maths.convolve1d(gas_flux, kernel)
+            gas_flux .= maths.convolve1d(gas_flux, kernel)
         end
         
         # Interpolate gas cell flux onto data grid
-        gas_flux = pcmath.cspline_interp(model_wave, gas_flux, data_λ)
+        gas_flux = maths.cspline_interp(λhr, gas_flux, data_λ)
     
     else
         gas_flux = nothing
@@ -167,9 +171,9 @@ function compute_rv_content(model::SpectralForwardModel, pars::Parameters; snr=1
 
     # Telluric flux on model wave grid for kth observation
     if !isnothing(model.tellurics)
-        tell_flux = build(model.tellurics, pars, model.templates["tellurics"], λhr)
+        tell_flux = build(model.tellurics, pars, model.templates)
         if !isnothing(model.lsf)
-            tell_flux = maths.convolve1d(tell_flux, kernel)
+            tell_flux .= maths.convolve1d(tell_flux, kernel)
         end
 
         # Interpolate telluric flux onto data grid
@@ -183,7 +187,7 @@ function compute_rv_content(model::SpectralForwardModel, pars::Parameters; snr=1
     good = findall(isfinite.(data_λ) .&& isfinite.(star_flux))
 
     # Create a spline for the stellar flux to compute derivatives
-    cspline_star = DataInterpolations.CubicSpline(star_flux[good], data_λ[good])
+    cspline_star = @views DataInterpolations.CubicSpline(star_flux[good], data_λ[good])
 
     # Stores rv content for star
     rvc_per_pix_star = fill(NaN, length(data_λ))
@@ -194,7 +198,7 @@ function compute_rv_content(model::SpectralForwardModel, pars::Parameters; snr=1
         # Find good pixels
         good = findall(isfinite.(data_λ) .&& isfinite.(gas_flux))
 
-        cspline_gas = DataInterpolations.CubicSpline(gas_flux[good], data_λ[good])
+        cspline_gas = @views DataInterpolations.CubicSpline(gas_flux[good], data_λ[good])
 
         # Stores rv content for gas cell
         rvc_per_pix_gas = fill(NaN, length(data_λ))
@@ -279,7 +283,32 @@ end
 #### CO-ADDING RVS ####
 #######################
 
-function combine_relative_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weights::Matrix{Float64}, indices::Vector{Float64})
+function combine_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weights::Matrix{Float64}, indices; n_iterations=10, nσ=4)
+    weights = copy(weights)
+    n_chunks, n_spec = size(rvs)
+    n_bins = length(indices)
+    norm_residuals = zeros(n_chunks, n_spec)
+    rvs_single_out, unc_single_out, t_binned_out, rvs_binned_out, unc_binned_out = combine_relative_rvs(bjds, rvs, weights, indices)
+    for i=1:n_iterations
+        println("Iteration $i")
+        rvs_single_out, unc_single_out, t_binned_out, rvs_binned_out, unc_binned_out = combine_relative_rvs(bjds, rvs, weights, indices)
+        rvli, wli = align_chunks(rvs, weights)
+        for j=1:n_bins
+            f, l = indices[j]
+            norm_residuals[:, f:l] .= (rvli[:, f:l] .- rvs_binned_out[j]) ./ (1 ./ weights[:, f:l])
+        end
+        good = findall(isfinite.(norm_residuals))
+        rms = sqrt(sum(norm_residuals[good].^2) / length(good))
+        bad = findall(abs.(norm_residuals) .> rms * nσ)
+        weights[bad] .= 0
+        if length(bad) == 0
+            break
+        end
+    end
+    return rvs_single_out, unc_single_out, t_binned_out, rvs_binned_out, unc_binned_out
+end
+
+function combine_relative_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weights::Matrix{Float64}, indices)
 
     # Numbers
     n_chunks, n_spec = size(rvs)
@@ -295,23 +324,30 @@ function combine_relative_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weigh
     rvs_binned_out = fill(NaN, n_bins)
     unc_binned_out = fill(NaN, n_bins)
     bad = findall(.~isfinite.(wli))
-    wli[bad] = 0
+    wli[bad] .= 0
         
     # Per-observation RVs
     for i=1:n_spec
         rvs_single_out[i] = maths.weighted_mean(rvli[:, i], wli[:, i])
+        n_good = length(findall(wli[:, i] .> 0))
+        if n_good > 0
+            unc_single_out[i] = maths.weighted_stddev(rvli[:, i], wli[:, i]) / sqrt(n_good)
+        end
     end
         
     # Per-night RVs
     for i=1:n_bins
         f, l = indices[i]
-        rr = collect(Iterator.flatten(rvli[:, f:l]))
-        ww = collect(Iterator.flatten(wli[:, f:l]))
-        bad = findall(.~isfinite(rr))
-        ww[bad] = 0
+        rr = rvli[:, f:l][:]
+        ww = wli[:, f:l][:]
+        bad = findall(.~isfinite.(rr))
+        ww[bad] .= 0
+        good = findall(ww .> 0)
         rvs_binned_out[i] = maths.weighted_mean(rr, ww)
-        unc_binned_out[i] = maths.weighted_stddev(rr, ww)
-        t_binned_out[i] = nanmean(bjds[f:l])
+        if length(good) > 0
+            unc_binned_out[i] = maths.weighted_stddev(rr, ww) / sqrt(length(good))
+        end
+        t_binned_out[i] = mean(bjds[f:l])
     end
     
     return rvs_single_out, unc_single_out, t_binned_out, rvs_binned_out, unc_binned_out
@@ -373,21 +409,19 @@ function bin_jds(jds::Vector{Float64}; sep=0.5, utc_offset=-8)
     n_obs_tot = length(jds)
 
     # Keep track of previous night's last index
-    prev_i = 0
+    prev_i = 1
 
     # Calculate mean JD date and number of observations per night for binned
     # Assume that observations are in separate bins if noon passes or if Δt > sep
     jds_binned = Float64[]
-    n_obs_binned = Float64[]
-    indices_binned = Vector{Float64}[]
+    indices_binned = Vector{Int64}[]
     if n_obs_tot == 1
         push!(jds_binned, jds[1])
-        push!(n_obs_binned, 1)
         push!(indices_binned, [1, 1])
     else
         for i=1:n_obs_tot-1
             t_noon = ceil(jds[i] + utc_offset / 24) - utc_offset / 24
-            if jds[i+1] > t_noon | jds[i+1] - jds[i] > sep
+            if jds[i+1] > t_noon || jds[i+1] - jds[i] > sep
                 jd_avg = mean(jds[prev_i:i])
                 push!(jds_binned, jd_avg)
                 push!(indices_binned, [prev_i, i])
