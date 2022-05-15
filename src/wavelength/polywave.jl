@@ -5,6 +5,7 @@ using EchelleSpectralModeling
 
 using PyCall
 using SciPy
+using Statistics
 
 export PolyλSolution
 
@@ -75,7 +76,7 @@ function build_λsolution_chebyval2d_flat(pixels, orders, max_pixel, max_order, 
     return λ
 end
 
-function fit_peaks_cc2d(pixel_centers, λ_centers, weights, orders, max_pixel, max_order, nx, deg_inter_order, deg_intra_order, n_iterations=3)
+function fit_peaks_cc2d(pixel_centers, λ_centers, weights, orders, max_pixel, max_order, nx, deg_inter_order, deg_intra_order, n_iterations=1)
 
     # Pars and bounds
     loss = (coeffs, _weights) -> begin
@@ -86,21 +87,25 @@ function fit_peaks_cc2d(pixel_centers, λ_centers, weights, orders, max_pixel, m
         return wres
     end
 
-    u0 = ones((deg_inter_order + 1) * (deg_intra_order + 1)) ./ 100
+    u0 = ones((deg_inter_order + 1) * (deg_intra_order + 1)) / 100
     weights_running = copy(weights)
     coeffs_best = copy(u0)
     numpy = pyimport("numpy")
 
     for i=1:n_iterations
-        result = SciPy.optimize.least_squares(loss, u0, method="lm", args=(weights_running,))
+        result = SciPy.optimize.least_squares(loss, coeffs_best, method="lm", args=(weights_running,), max_nfev=200 * length(u0))
         coeffs_best .= result["x"]
         model_best = build_λsolution_chebyval2d_flat(pixel_centers, orders, max_pixel, max_order, numpy.reshape(coeffs_best, (deg_inter_order+1, deg_intra_order+1)))
         residuals = λ_centers .- model_best
         residuals .= maths.δλ2δv(residuals, model_best)
         bad = findall(abs.(residuals) .> 3 * std(residuals))
+        if length(bad) == 0
+            break
+        end
         weights_running[bad] .= 0
     end
 
     # Return
+    coeffs_best = numpy.reshape(coeffs_best, (deg_inter_order+1, deg_intra_order+1))
     return coeffs_best
 end
