@@ -53,11 +53,26 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
     peaks = peaks[2:end-1]
 
     # Only consider peaks with enough flux
-    good_peaks = Int64[]
+    good_peaks_int = Int64[]
     for peak ∈ peaks
         if lfc_flux_no_bg[peak] >= 0.1 * lfc_peak_max
-            push!(good_peaks, peak)
+            push!(good_peaks_int, peak)
         end
+    end
+
+    # Further refine peaks based on centroids
+    good_peaks = zeros(length(good_peaks_int))
+    for i=1:length(good_peaks_int)
+        use = findall((xarr .>= floor(good_peaks_int[i] - peak_spacing(good_peaks_int[i]) / 2)) .&& (xarr .< ceil(good_peaks_int[i] + peak_spacing(good_peaks_int[i]) / 2)))
+        xx, yy = xarr[use], lfc_flux_no_bg[use]
+        good_peaks[i] = maths.weighted_mean(xx, yy)
+    end
+
+    # Once more
+    for i=1:length(good_peaks)
+        use = findall((xarr .>= floor(good_peaks[i] - peak_spacing(good_peaks_int[i]) / 2)) .&& (xarr .< ceil(good_peaks_int[i] + peak_spacing(good_peaks[i]) / 2)))
+        xx, yy = xarr[use], lfc_flux_no_bg[use]
+        good_peaks[i] = maths.weighted_mean(xx, yy)
     end
 
     # Fit each peak with a Gaussian
