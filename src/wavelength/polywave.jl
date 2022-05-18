@@ -58,6 +58,7 @@ end
 function build_λsolution_chebyval2d(pixels, orders, max_pixel, max_order, coeffs)
     nx = length(pixels)
     nm = length(orders)
+    m, n = size(coeffs)
     λ = fill(NaN, (nm, nx))
     for i=1:nx
         for m=1:nm
