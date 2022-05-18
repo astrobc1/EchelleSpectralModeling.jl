@@ -61,11 +61,11 @@ function build_λsolution_chebyval2d(pixels, orders, max_pixel, max_order, coeff
     m, n = size(coeffs)
     λ = fill(NaN, (nm, nx))
     for i=1:nx
-        for m=1:nm
+        for o=1:nm
             s = 0.0
             for j=1:n
                 for k=1:m
-                    s += coeffs[j, k] * maths.chebval(pixels[i] / max_pixel, j-1) * maths.chebval(orders[m] / max_order, k-1) / orders[m]
+                    s += coeffs[j, k] * maths.chebval(pixels[i] / max_pixel, j-1) * maths.chebval(orders[o] / max_order, k-1) / orders[o]
                 end
             end
             λ[m, i] = s
