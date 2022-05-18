@@ -4,7 +4,7 @@ using Polynomials
 using Peaks
 using Infiltrator
 using PyPlot
-using ModelingToolkit, GalacticOptim, Optim
+using ModelingToolkit, GalacticOptim, Optim, GalacticOptimJL
 
 function estimate_peak_spacing(xi, xf, λi, λf, λ_estimate, ν0, Δν)
     integers, lfc_centers_λ_theoretical = gen_theoretical_peaks(λi, λf, ν0, Δν)
@@ -94,24 +94,32 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
         yy ./= nanmaximum(yy)
         
         # System
-        @variables A μ σ B
-        @parameters x[1:length(xx)] y[1:length(xx)]
-        loss = begin
-            model = maths.gauss(collect(x), A, μ, σ) .+ B
-            sqrt(sum((collect(y) .- model).^2) / length(x))
+        # @variables A μ σ B
+        # @parameters x[1:length(xx)] y[1:length(xx)]
+        # loss = begin
+        #    model = maths.gauss(collect(x), A, μ, σ) .+ B
+        #    sqrt(sum((collect(y) .- model).^2) / length(x))
+        # end
+        # @named sys = OptimizationSystem(loss, [A, μ, σ, B], [x, y])
+        loss = (pars) -> begin
+            model = maths.gauss(xx, pars[1], pars[2], pars[3]) .+ pars[4]
+            return sqrt(sum((yy .- model).^2) / length(xx))
         end
-        @named sys = OptimizationSystem(loss, [A, μ, σ, B], [x, y])
 
         # Pars and bounds
-        u0 = [A => 1.0, μ => good_peaks[i], σ => σ_guess[2], B => 0.1]
-        lb = [A => 0.7, μ => good_peaks[i] + μ_bounds[1], σ => σ_guess[1], B => -0.5]
-        ub = [A => 1.3, μ => good_peaks[i] + μ_bounds[2], σ => σ_guess[3], B => 0.5]
-        p = [x => xx, y => yy]
+        # u0 = [A => 1.0, μ => good_peaks[i], σ => σ_guess[2], B => 0.1]
+        # lb = [A => 0.7, μ => good_peaks[i] + μ_bounds[1], σ => σ_guess[1], B => -0.5]
+        # ub = [A => 1.3, μ => good_peaks[i] + μ_bounds[2], σ => σ_guess[3], B => 0.5]
+        # p = [x => xx, y => yy]
+        
+        u0 = [1.0, good_peaks[i], σ_guess[2], 0.1]
 
-        prob = OptimizationProblem(sys, u0, p, grad=false, hess=false)
+        #prob = OptimizationProblem(sys, u0, p, grad=false, hess=false)
+        #prob = OptimizationProblem(loss, u0, grad=false, hess=false)
+        ubest = Optim.optimize(loss, u0, NelderMead()) |> Optim.minimizer
 
         # Fit
-        ubest = solve(prob, NelderMead(), maxiters=1000)
+        #ubest = solve(prob, NelderMead(), maxiters=1000)
 
         # Results
         amplitudes[i] = ubest[1]
@@ -121,9 +129,10 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
         rms[i] = maths.rmsloss(maths.gauss(xx, amplitudes[i], lfc_centers_pix[i], σs[i]) .+ offsets[i], yy)
 
         #@infiltrate
+        #pygui(true)
         #begin
-        #    plot(xx, yy);
-        #    plot(xx, maths.gauss(xx, amplitudes[i], lfc_centers_pix[i], σs[i]) .+ offsets[i]);
+        #  plot(xx, yy);
+        #  plot(xx, maths.gauss(xx, amplitudes[i], lfc_centers_pix[i], σs[i]) .+ offsets[i]);
         #end
     end
 
