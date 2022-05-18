@@ -55,14 +55,14 @@ function EchelleSpectralModeling.get_init_parameters(m::PolyλSolution, data::Sp
 end
 
 ## 2d CC polynomial
-function build_λsolution_chebyval2d(chebs_pixels, chebs_orders, orders, nx, nm, coeffs)
+function build_λsolution_chebyval2d(pixels, orders, max_pixel, max_order, coeffs)
     λ = fill(NaN, (nm, nx))
     for i=1:nx
         for m=1:nm
-            s = 0
+            s = 0.0
             for j=1:n
                 for k=1:m
-                    s += coeffs[j, k] * chebs_pixels[i] * chebs_orders[i] / orders[i]
+                    s += coeffs[j, k] * maths.chebval(pixels[i], j-1) * maths.chebval(orders[m], k-1) / orders[m]
                 end
             end
             λ[m, i] = s
