@@ -8,6 +8,7 @@ struct Chi2 <: SpectralModelObjectiveFunction
 end
 
 function compute_obj(obj::Chi2, pars::Parameters, data::SpecData1d, model::SpectralForwardModel)
+    @infiltrate
     try
         _, model_flux = build(model, pars, data)
         n_good = sum(data.data.mask)

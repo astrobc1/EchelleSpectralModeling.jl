@@ -65,10 +65,10 @@ function build_λsolution_chebyval2d(pixels, orders, max_pixel, max_order, coeff
             s = 0.0
             for j=1:n
                 for k=1:m
-                    s += coeffs[j, k] * maths.chebval(pixels[i] / max_pixel, j-1) * maths.chebval(orders[o] / max_order, k-1) / orders[o]
+                    s += coeffs[k, j] * maths.chebval(pixels[i] / max_pixel, j-1) * maths.chebval(orders[o] / max_order, k-1) / orders[o]
                 end
             end
-            λ[m, i] = s
+            λ[o, i] = s
         end
     end
     return λ
