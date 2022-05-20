@@ -79,6 +79,18 @@ git-tree-sha1 = "28bbdbf0354959db89358d1d79d421ff31ef0b5e"
 uuid = "62783981-4cbd-42fc-bca8-16325de8dc4b"
 version = "0.1.3"
 
+[[deps.CFITSIO]]
+deps = ["CFITSIO_jll"]
+git-tree-sha1 = "8425c47db102577eefb93cb37b4480e750116b0d"
+uuid = "3b1b4be9-1499-4b22-8d78-7db3344d1961"
+version = "1.4.1"
+
+[[deps.CFITSIO_jll]]
+deps = ["Artifacts", "JLLWrappers", "LibCURL_jll", "Libdl", "Pkg", "Zlib_jll"]
+git-tree-sha1 = "9c91a9358de42043c3101e3a29e60883345b0b39"
+uuid = "b3e40c51-02ae-5482-8a39-3ace5868dcf4"
+version = "4.0.0+0"
+
 [[deps.CPUSummary]]
 deps = ["CpuId", "IfElse", "Static"]
 git-tree-sha1 = "baaac45b4462b3b0be16726f38b789bf330fcb7a"
@@ -337,6 +349,14 @@ git-tree-sha1 = "d1081912769ed7d6712e1757059c7f67762ff36f"
 uuid = "732a3c5d-d6c0-58bc-adb1-1b51709a25e2"
 version = "0.7.1"
 
+[[deps.EchelleBase]]
+deps = ["DataFrames", "DataInterpolations", "DataStructures", "FITSIO", "LinearAlgebra", "LoopVectorization", "NaNStatistics", "Pkg", "Polynomials", "PyCall", "Reexport", "Statistics", "StatsBase"]
+git-tree-sha1 = "079c33686015d3ac66e5486c530682a6a614dcc2"
+repo-rev = "master"
+repo-url = "https://github.com/astrobc1/EchelleBase.jl"
+uuid = "fb2f92b1-9968-41b4-8835-2765b866fa7d"
+version = "0.1.0"
+
 [[deps.EllipsisNotation]]
 deps = ["ArrayInterface"]
 git-tree-sha1 = "d064b0340db45d48893e7604ec95e7a2dc9da904"
@@ -353,6 +373,12 @@ version = "1.14.0"
 git-tree-sha1 = "56559bbef6ca5ea0c0818fa5c90320398a6fbf8d"
 uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
 version = "0.1.8"
+
+[[deps.FITSIO]]
+deps = ["CFITSIO", "Printf", "Reexport", "Tables"]
+git-tree-sha1 = "e6033823834ec0070125120d4d4a1234f1826a47"
+uuid = "525bcba6-941b-5504-bd06-fd0dc1a4d2eb"
+version = "0.16.12"
 
 [[deps.FastBroadcast]]
 deps = ["LinearAlgebra", "Polyester", "Static"]
