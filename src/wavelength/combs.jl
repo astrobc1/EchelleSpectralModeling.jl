@@ -90,9 +90,9 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
         # Crop data
         xx, yy = xarr[use], lfc_flux_no_bg[use]
 
-        # Normalize lfc flux to max
+        # Remove baseline (approx)
         yy .-= nanminimum(yy)
-        yy ./= nanmaximum(yy)
+        peak_val = nanmaximum(yy)
 
         #@infiltrate
         
@@ -115,9 +115,9 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
         #ub = [A => 1.3, μ => good_peaks[i] + μ_bounds[2], σ => σ_guess[3], B => 0.5]
         #p = [x => xx, y => yy]
         
-        u0 = [1.0, good_peaks[i], σ_guess[2], 0.1]
-        lb = [0.7, good_peaks[i] + μ_bounds[1], σ_guess[1], -0.5]
-        ub = [1.3, good_peaks[i] + μ_bounds[2], σ_guess[3], 0.5]
+        u0 = [peak_val, good_peaks[i], σ_guess[2], 0.1]
+        lb = [0.7 * peak_val, good_peaks[i] + μ_bounds[1], σ_guess[1], -0.5]
+        ub = [1.3 * peak_val, good_peaks[i] + μ_bounds[2], σ_guess[3], 0.5]
 
         # Fit
         #prob = GalacticOptim.OptimizationProblem(sys, u0, p, grad=false, hess=false)
@@ -148,7 +148,7 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
 
     # Determine which LFC spot matches each peak
     lfc_centers_λ = Float64[]
-    peak_integers = Float64[]
+    peak_integers = Int[]
     for i=1:length(lfc_centers_pix)
         diffs = abs.(pfit_estimate(lfc_centers_pix[i]) .- lfc_centers_λ_theoretical)
         k = argmin(diffs)
