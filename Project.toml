@@ -9,6 +9,7 @@ CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Calculus = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DataInterpolations = "82cc6244-b520-54b8-b5a6-8a565e85f1d0"
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 EchelleBase = "fb2f92b1-9968-41b4-8835-2765b866fa7d"
