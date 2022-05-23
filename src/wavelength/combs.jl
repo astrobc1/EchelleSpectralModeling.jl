@@ -116,15 +116,15 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
         #p = [x => xx, y => yy]
         
         u0 = [peak_val, good_peaks[i], σ_guess[2], 0.1]
-        lb = [0.7 * peak_val, good_peaks[i] + μ_bounds[1], σ_guess[1], -0.5]
-        ub = [1.3 * peak_val, good_peaks[i] + μ_bounds[2], σ_guess[3], 0.5]
+        lb = [0.7 * peak_val, good_peaks[i] + μ_bounds[1], σ_guess[1], -0.5 * peak_val]
+        ub = [1.3 * peak_val, good_peaks[i] + μ_bounds[2], σ_guess[3], 0.5 * peak_val]
 
         # Fit
         #prob = GalacticOptim.OptimizationProblem(sys, u0, p, grad=false, hess=false)
         prob = GalacticOptimJL.OptimizationProblem(loss, u0, grad=false, hess=false)
         #prob = GalacticOptim.OptimizationProblem(OptimizationFunction(loss, GalacticOptim.AutoZygote()), u0, grad=true, lb=ul, ub=ub, )
         #ubest = Optim.optimize(loss, u0, NelderMead()) |> Optim.minimizer
-        ubest = solve(prob, Optim.NelderMead())
+        ubest = solve(prob, Optim.NelderMead(), maxiters=1000)
         for j=1:length(ubest)
             if ubest[j] < lb[j] || ubest[j] > ub[j]
                 ubest[j] = u0[j]
@@ -139,10 +139,11 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
         rms[i] = maths.rmsloss(maths.gauss(xx, amplitudes[i], lfc_centers_pix[i], σs[i]) .+ offsets[i], yy)
 
         #@infiltrate
-        #pygui(true)
         #begin
-        #  plot(xx, yy);
-        #  plot(xx, maths.gauss(xx, amplitudes[i], lfc_centers_pix[i], σs[i]) .+ offsets[i]);
+         #using PyPlot
+         #pygui(true)
+         #plot(xx, yy);
+         #plot(xx, maths.gauss(xx, amplitudes[i], lfc_centers_pix[i], σs[i]) .+ offsets[i]);
         #end
     end
 

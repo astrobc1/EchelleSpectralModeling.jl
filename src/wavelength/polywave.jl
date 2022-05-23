@@ -112,20 +112,22 @@ function fit_peaks_cc2d(pixel_centers, orders, λ_centers, weights, max_pixel, m
         end
 
         # Lsq
-        result = scipyopt.least_squares(loss, p0, max_nfev=400 * length(coeffs_best), method="lm")
-        coeffs_best = result["x"]
+        result = scipyopt.least_squares(loss, p0, max_nfev=800 * length(coeffs_best), method="lm")
+        coeffs_best .= result["x"]
 
         # Flag
-        model_best = build_λsolution_chebyval2d_flat(chebs_pixels, chebs_orders, reshape(coeffs_best, (deg_inter_order+1, deg_intra_order+1)), orders)
-        residuals = maths.δλ2δv(λ_centers .- model_best, λ_centers)
-        bad = findall(abs.(residuals) .> 3 * maths.robust_σ(residuals))
-        if length(bad) == 0
-            break
-        end
-        weights_running[bad] .= 0
+        #model_best = build_λsolution_chebyval2d_flat(chebs_pixels, chebs_orders, reshape(coeffs_best, (deg_inter_order+1, deg_intra_order+1)), orders)
+        #residuals = maths.δλ2δv(λ_centers .- model_best, λ_centers)
+        #bad = findall(abs.(residuals) .> 3 * maths.robust_σ(residuals))
+        #if length(bad) == 0
+        #    break
+        #end
+        #weights_running[bad] .= 0
     end
 
-    # Return
+    good_peaks = findall(weights_running .> 0)
     coeffs_best = reshape(coeffs_best, (deg_inter_order+1, deg_intra_order+1))
-    return coeffs_best
+
+    # Return
+    return coeffs_best, good_peaks
 end
