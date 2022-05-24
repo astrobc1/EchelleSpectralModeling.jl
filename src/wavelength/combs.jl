@@ -82,13 +82,14 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
     rms = fill(NaN, length(good_peaks))
     σs = fill(NaN, length(good_peaks))
     offsets = fill(NaN, length(good_peaks))
+    #offset_slopes = fill(NaN, length(good_peaks))
     for i=1:length(good_peaks)
 
         # Region to consider
         use = findall((xarr .>= floor(good_peaks[i] - peak_spacing(good_peaks[i]) / 2)) .&& (xarr .< ceil(good_peaks[i] + peak_spacing(good_peaks[i]) / 2)))
 
         # Crop data
-        xx, yy = xarr[use], lfc_flux_no_bg[use]
+        xx, yy = xarr[use], lfc_flux[use]
 
         # Remove baseline (approx)
         yy .-= nanminimum(yy)
@@ -105,7 +106,14 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
         # end
         # @named sys = OptimizationSystem(loss, [A, μ, σ, B], [x, y])
         loss = (pars, _) -> begin
-          model = maths.gauss(xx, pars[1], pars[2], pars[3]) .+ pars[4]
+          model = maths.gauss(xx, pars[1], pars[2], pars[3]) .+ (pars[4] * pars[5] .* xx)
+        #   amp = pars[1]
+        #   μ = pars[2]
+        #   α = pars[3]
+        #   β = pars[4]
+        #   offset = pars[5]
+        #   offset_slope = pars[6]
+        #   model = @. amp * (1 + (((xx - μ) / α)^2))^-β + (offset + offset_slope * (xx - nanmean(xx)))
           return sqrt(sum((yy .- model).^2) / length(xx))
         end
 
@@ -115,16 +123,19 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
         #ub = [A => 1.3, μ => good_peaks[i] + μ_bounds[2], σ => σ_guess[3], B => 0.5]
         #p = [x => xx, y => yy]
         
-        u0 = [peak_val, good_peaks[i], σ_guess[2], 0.1]
+        u0 = [peak_val, good_peaks[i], σ_guess[2], 0.1 * peak_val]
         lb = [0.7 * peak_val, good_peaks[i] + μ_bounds[1], σ_guess[1], -0.5 * peak_val]
         ub = [1.3 * peak_val, good_peaks[i] + μ_bounds[2], σ_guess[3], 0.5 * peak_val]
+        #u0 = [peak_val, good_peaks[i], 1.0, 1.0, 0.1 * peak_val, 0.1 * peak_val]
+        #lb = [0.7 * peak_val, good_peaks[i] + μ_bounds[1], -3, -3, -0.5 * peak_val, 0.5 * peak_val]
+        #ub = [1.3 * peak_val, good_peaks[i] + μ_bounds[2], 3, 3, 0.5 * peak_val, -0.5 * peak_val]
 
         # Fit
         #prob = GalacticOptim.OptimizationProblem(sys, u0, p, grad=false, hess=false)
         prob = GalacticOptimJL.OptimizationProblem(loss, u0, grad=false, hess=false)
         #prob = GalacticOptim.OptimizationProblem(OptimizationFunction(loss, GalacticOptim.AutoZygote()), u0, grad=true, lb=ul, ub=ub, )
         #ubest = Optim.optimize(loss, u0, NelderMead()) |> Optim.minimizer
-        ubest = solve(prob, Optim.NelderMead(), maxiters=1000)
+        ubest = solve(prob, Optim.NelderMead(), maxiters=5000)
         for j=1:length(ubest)
             if ubest[j] < lb[j] || ubest[j] > ub[j]
                 ubest[j] = u0[j]
@@ -141,8 +152,16 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
         #@infiltrate
         #begin
          #using PyPlot
-         #pygui(true)
-         #plot(xx, yy);
+         #amp = ubest[1]
+          #μ = ubest[2]
+          #α = ubest[3]
+          #β = ubest[4]
+          #offset = ubest[5]
+          #offset_slope = ubest[6]
+          #model = @. amp * (1 + (((xx - μ) / α)^2))^-β + (offset + offset_slope * xx)
+        #plot(xx, model);
+        #plot(xx, yy)
+        #plt.show()
          #plot(xx, maths.gauss(xx, amplitudes[i], lfc_centers_pix[i], σs[i]) .+ offsets[i]);
         #end
     end

@@ -90,7 +90,7 @@ function build_λsolution_chebyval2d_flat(chebs_pixels, chebs_orders, coeffs, or
     return λ
 end
 
-function fit_peaks_cc2d(pixel_centers, orders, λ_centers, weights, max_pixel, max_order, nx, deg_inter_order, deg_intra_order, n_iterations=1)
+function fit_peaks_cc2d(pixel_centers, orders, λ_centers, weights, max_pixel, max_order, nx, deg_inter_order, deg_intra_order, n_iterations=1, max_vel_cut=200)
 
     # Chebs
     chebs_pixels, chebs_orders = maths.get_chebvals(pixel_centers, orders, max_pixel, max_order, deg_intra_order, deg_inter_order)
@@ -116,13 +116,13 @@ function fit_peaks_cc2d(pixel_centers, orders, λ_centers, weights, max_pixel, m
         coeffs_best .= result["x"]
 
         # Flag
-        #model_best = build_λsolution_chebyval2d_flat(chebs_pixels, chebs_orders, reshape(coeffs_best, (deg_inter_order+1, deg_intra_order+1)), orders)
-        #residuals = maths.δλ2δv(λ_centers .- model_best, λ_centers)
-        #bad = findall(abs.(residuals) .> 3 * maths.robust_σ(residuals))
-        #if length(bad) == 0
-        #    break
-        #end
-        #weights_running[bad] .= 0
+        model_best = build_λsolution_chebyval2d_flat(chebs_pixels, chebs_orders, reshape(coeffs_best, (deg_inter_order+1, deg_intra_order+1)), orders)
+        residuals = maths.δλ2δv(λ_centers .- model_best, λ_centers)
+        bad = findall(abs.(residuals) .> 3 * maths.robust_σ(residuals) .|| (residuals .> max_vel_cut))
+        if length(bad) == 0
+           break
+        end
+        weights_running[bad] .= 0
     end
 
     good_peaks = findall(weights_running .> 0)
