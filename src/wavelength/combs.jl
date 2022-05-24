@@ -106,7 +106,8 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
         # end
         # @named sys = OptimizationSystem(loss, [A, μ, σ, B], [x, y])
         loss = (pars, _) -> begin
-          model = maths.gauss(xx, pars[1], pars[2], pars[3]) .+ (pars[4] * pars[5] .* xx)
+          #model = maths.gauss(xx, pars[1], pars[2], pars[3]) .+ (pars[4] * pars[5] .* xx)
+          model = maths.gauss(xx, pars[1], pars[2], pars[3]) .+ pars[4]
         #   amp = pars[1]
         #   μ = pars[2]
         #   α = pars[3]
