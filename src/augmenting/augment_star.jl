@@ -41,7 +41,7 @@ function augment_star!(ensemble, opt_results)
             end
             λ_star_rest = maths.doppler_shift_λ(data_λ , vel)
             residuals[:, i] .= maths.cspline_interp(λ_star_rest, residuals_lr, star_λ)
-            rms = maths.rmsloss(residuals[:, i])
+            rms = maths.rmsloss(residuals[:, i], ensemble.data[i].data.mask)
             weights_lr = ensemble.data[i].data.mask .* 1 ./ rms^2
 
             # Telluric mask
