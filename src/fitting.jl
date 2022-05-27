@@ -166,7 +166,7 @@ function optimize_all_observations(ensemble, p0s, iteration::Int, output_path::S
     ti = time()
 
     # Opt results (vector of named tuples)
-    if nworkers() > 1
+    if nprocs() > 1
         opt_results = pmap(1:length(ensemble.data)) do i
             optimize_and_plot_observation(p0s[i], ensemble.data[i], ensemble.model, ensemble.obj, iteration, output_path)
         end
