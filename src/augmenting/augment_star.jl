@@ -1,6 +1,7 @@
 using EchelleBase
 using EchelleSpectralModeling
 using NaNStatistics
+using Infiltrator
 
 export augment_star!
 
@@ -41,8 +42,14 @@ function augment_star!(ensemble, opt_results)
             end
             λ_star_rest = maths.doppler_shift_λ(data_λ , vel)
             residuals[:, i] .= maths.cspline_interp(λ_star_rest, residuals_lr, star_λ)
-            rms = maths.rmsloss(residuals[:, i], ensemble.data[i].data.mask)
-            weights_lr = ensemble.data[i].data.mask .* 1 ./ rms^2
+            good = findall(isfinite.(residuals_lr) .&& (ensemble.data[i].data.mask .> 0))
+            if length(good) == 0
+                continue
+            end
+            rms = (nansum(residuals_lr[good].^2) / length(good))^.5
+            weights_lr = ensemble.data[i].data.mask ./ rms^2
+            bad = findall(.~isfinite.(weights_lr))
+            weights_lr[bad] .= 0
 
             # Telluric mask
             if !isnothing(ensemble.model.tellurics) && hasproperty(ensemble.model.tellurics, :mask) && ensemble.model.tellurics.mask
