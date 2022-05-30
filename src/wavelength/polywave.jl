@@ -92,11 +92,10 @@ end
 
 function fit_peaks_cc2d(pixel_centers, orders, λ_centers, weights, max_pixel, max_order, nx, deg_inter_order, deg_intra_order, n_iterations=1, max_vel_cut=200)
 
-    # Chebs
-    chebs_pixels, chebs_orders = maths.get_chebvals(pixel_centers, orders, max_pixel, max_order, deg_intra_order, deg_inter_order)
-
     # Initial params and weights
     p0 = ones((deg_inter_order + 1) * (deg_intra_order + 1)) / 100
+    pixel_centers_running = copy(pixel_centers)
+    λ_centers_running = copy(λ_centers)
     weights_running = copy(weights)
     coeffs_best = copy(p0)
 
@@ -104,11 +103,22 @@ function fit_peaks_cc2d(pixel_centers, orders, λ_centers, weights, max_pixel, m
     scipyopt = pyimport("scipy.optimize")
 
     for i=1:n_iterations
+
+        # Update bad weights
+        bad = findall(.~isfinite.(weights_running) .|| (weights_running .== 0) .|| .~isfinite.(pixel_centers) .|| .~isfinite.(λ_centers))
+        weights_running[bad] .= 0
+        pixel_centers_running[bad] .= 0
+        λ_centers_running[bad] .= 0
+
+        # Chebs
+        chebs_pixels, chebs_orders = maths.get_chebvals(pixel_centers_running, orders, max_pixel, max_order, deg_intra_order, deg_inter_order)
         
         # Loss
         loss = (coeffs) -> begin
             _model = build_λsolution_chebyval2d_flat(chebs_pixels, chebs_orders, reshape(coeffs, (deg_inter_order+1, deg_intra_order+1)), orders)
-            return weights_running .* (λ_centers .- _model)
+            wres = weights_running .* (λ_centers_running .- _model)
+            #@show nansum(wres.^2) / nansum(weights_running)
+            return wres
         end
 
         # Lsq
@@ -118,7 +128,8 @@ function fit_peaks_cc2d(pixel_centers, orders, λ_centers, weights, max_pixel, m
         # Flag
         model_best = build_λsolution_chebyval2d_flat(chebs_pixels, chebs_orders, reshape(coeffs_best, (deg_inter_order+1, deg_intra_order+1)), orders)
         residuals = maths.δλ2δv(λ_centers .- model_best, λ_centers)
-        bad = findall(abs.(residuals) .> 3 * maths.robust_σ(residuals) .|| (residuals .> max_vel_cut))
+        σuse = findall(isfinite.(residuals) .&& (abs.(residuals) .> 0))
+        bad = findall(abs.(residuals) .> min(3 * maths.robust_σ(residuals[σuse]), max_vel_cut))
         if length(bad) == 0
            break
         end
