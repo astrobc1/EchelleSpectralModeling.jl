@@ -82,6 +82,7 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
     rms = fill(NaN, length(good_peaks))
     σs = fill(NaN, length(good_peaks))
     offsets = fill(NaN, length(good_peaks))
+    slopes = fill(NaN, length(good_peaks))
     for i=1:length(good_peaks)
 
         # Region to consider
@@ -95,16 +96,16 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
         peak_val = nanmaximum(yy)
 
         model = (_, pars) -> begin
-            return maths.gauss(xx, pars[1], pars[2], pars[3]) .+ pars[4] # .+ pars[5] .* (xx .- nanmean(xx))
+            return maths.gauss(xx, pars[1], pars[2], pars[3]) .+ pars[4] .+ pars[5] .* (xx .- nanmean(xx))
         end
 
         # Pars and bounds
-        #u0 = [peak_val, good_peaks[i], σ_guess[2], 0.1 * peak_val, 0.01 * peak_val]
-        #lb = [0.7 * peak_val, good_peaks[i] + μ_bounds[1], σ_guess[1], -0.5 * peak_val, -0.1 * peak_val]
-        #ub = [1.3 * peak_val, good_peaks[i] + μ_bounds[2], σ_guess[3], 0.5 * peak_val, 0.1 * peak_val]
-        u0 = [peak_val, good_peaks[i], σ_guess[2], 0.1 * peak_val]
-        lb = [0.7 * peak_val, good_peaks[i] + μ_bounds[1], σ_guess[1], -0.5 * peak_val]
-        ub = [1.3 * peak_val, good_peaks[i] + μ_bounds[2], σ_guess[3], 0.5 * peak_val]
+        u0 = [peak_val, good_peaks[i], σ_guess[2], 0.1 * peak_val, 0.01 * peak_val]
+        lb = [0.7 * peak_val, good_peaks[i] + μ_bounds[1], σ_guess[1], -0.5 * peak_val, -0.1 * peak_val]
+        ub = [1.3 * peak_val, good_peaks[i] + μ_bounds[2], σ_guess[3], 0.5 * peak_val, 0.1 * peak_val]
+        #u0 = [peak_val, good_peaks[i], σ_guess[2], 0.1 * peak_val]
+        #lb = [0.7 * peak_val, good_peaks[i] + μ_bounds[1], σ_guess[1], -0.5 * peak_val]
+        #ub = [1.3 * peak_val, good_peaks[i] + μ_bounds[2], σ_guess[3], 0.5 * peak_val]
 
         # Fit
         try
@@ -114,6 +115,7 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
             lfc_centers_pix[i] = ubest[2]
             σs[i] = ubest[3]
             offsets[i] = ubest[4]
+            slopes[i] = ubest[5]
             rms[i] = maths.rmsloss(model(xx, ubest), yy)
             #begin
             #    scatter(xx, yy)
@@ -135,7 +137,7 @@ function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4,
         push!(lfc_centers_λ, lfc_centers_λ_theoretical[k])
         push!(peak_integers, lfc_peak_integers[k])
     end
-    return lfc_centers_pix, lfc_centers_λ, peak_integers, amplitudes, σs, rms, offsets
+    return lfc_centers_pix, lfc_centers_λ, peak_integers, amplitudes, σs, rms, offsets, slopes
 end
 
 function gen_theoretical_peaks(λi, λf, ν0, Δν)
@@ -166,6 +168,7 @@ function estimate_background(lfc_λ, lfc_flux, ν0, Δν)
     peak_spacing = estimate_peak_spacing(xi, xf, λi, λf, lfc_λ, ν0, Δν)
     min_peak_spacing = min(peak_spacing(xi), peak_spacing(xf))
     background = maths.generalized_median_filter1d(lfc_flux, width=Int(round(2 * min_peak_spacing)), p=0.01)
+    background .= maths.poly_filter([1:length(lfc_flux);], background, width=3 * (peak_spacing(xi) + peak_spacing(xf)) / 2, deg=3)
     return background
 end
 
