@@ -1,6 +1,5 @@
 using SpecialMatrices
 using DataInterpolations
-using BSplines
 
 using EchelleBase
 using EchelleSpectralModeling
@@ -82,7 +81,8 @@ function fit_peaks_bs2d(pixel_centers, orders, λ_centers, weights, deg_inter_or
 
         # Flag
         model_best = [spl(pixel_centers[j], orders[j])[1] for j=1:length(pixel_centers)]
-        residuals = maths.δλ2δv(λ_centers .- model_best, λ_centers)
+        residuals = λ_centers .- model_best
+        residuals .= maths.δλ2δv.(residuals, λ_centers)
         useσ = findall(weights_running .> 0)
         bad = findall(abs.(residuals) .> min(3 * maths.robust_σ(residuals[useσ]), max_vel_cut) .&& weights_running .> 0)
         if length(bad) == 0

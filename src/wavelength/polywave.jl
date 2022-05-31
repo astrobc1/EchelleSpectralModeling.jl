@@ -127,7 +127,7 @@ function fit_peaks_cc2d(pixel_centers, orders, λ_centers, weights, max_pixel, m
 
         # Flag
         model_best = build_λsolution_chebyval2d_flat(chebs_pixels, chebs_orders, reshape(coeffs_best, (deg_inter_order+1, deg_intra_order+1)), orders)
-        residuals = maths.δλ2δv(λ_centers .- model_best, λ_centers)
+        residuals = maths.δλ2δv.(λ_centers .- model_best, λ_centers)
         σuse = findall(isfinite.(residuals) .&& (abs.(residuals) .> 0))
         bad = findall(abs.(residuals) .> min(3 * maths.robust_σ(residuals[σuse]), max_vel_cut))
         if length(bad) == 0
