@@ -4,6 +4,8 @@ using DataInterpolations
 using EchelleBase
 using EchelleSpectralModeling
 
+using Infiltrator
+
 export SplineλSolution
 
 struct SplineλSolution <: SpectralModelComponent
@@ -95,5 +97,16 @@ function fit_peaks_bs2d(pixel_centers, orders, λ_centers, weights, deg_inter_or
     good_peaks = findall(isfinite.(weights_running) .&& (weights_running .> 0) .&& isfinite.(pixel_centers) .&& isfinite.(λ_centers))
 
     # Return
-    return spl, spl.get_coeffs(), good_peaks
+    return spl, good_peaks
+end
+
+function build_λsolution_bs2d(spl, nx, orders)
+    n_orders = length(orders)
+    λ = fill(NaN, (n_orders, nx))
+    for i=1:nx
+	    for j=1:n_orders
+            λ[j, i] = spl(i, orders[j])[1]
+        end
+    end
+    return λ
 end

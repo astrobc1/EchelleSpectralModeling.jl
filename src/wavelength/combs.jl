@@ -7,177 +7,179 @@ using PyPlot
 using Zygote
 using ModelingToolkit, Optim, GalacticOptim, GalacticOptimJL
 
-function estimate_peak_spacing(xi, xf, λi, λf, λ_estimate, ν0, Δν)
-    integers, lfc_centers_λ_theoretical = gen_theoretical_peaks(λi, λf, ν0, Δν)
-    xarr = [1:length(λ_estimate);]
+SPEED_OF_LIGHT_MPS = 299792458.0
+
+function get_peak_spacing(λ, λi, λf, ν0, Δν; deg=1)
+
+    # Get peaks
+    integers, centers_λ = gen_theoretical_peaks(λi, λf, ν0, Δν)
+
+    # Pixel grid
+    xarr = 1:length(λ)
+
+    # Storage arrays
     peak_separations = Float64[]
-    xx = Float64[]
-    for i=1:length(lfc_centers_λ_theoretical)-1
-        k1 = argmin(abs.(lfc_centers_λ_theoretical[i] .- λ_estimate))
-        k2 = argmin(abs.(lfc_centers_λ_theoretical[i+1] .- λ_estimate))
+    x = Float64[]
+
+    # Compute peak separation for each spot
+    for i=1:length(centers_λ)-1
+        k1 = argmin(abs.(centers_λ[i] .- λ))
+        k2 = argmin(abs.(centers_λ[i+1] .- λ))
         push!(peak_separations, abs(xarr[k1] - xarr[k2]))
-        push!(xx, (xarr[k1] + xarr[k2]) / 2)
+        push!(x, (xarr[k1] + xarr[k2]) / 2)
     end
-    pfit = Polynomials.fit(xx, peak_separations, 1)
+
+    # Make a polynomial, assume linear across order
+    pfit = Polynomials.fit(x, peak_separations, deg)
+
+    # Return
     return pfit
 end
 
-function get_peaks(λ_estimate, lfc_flux, ν0, Δν, xrange; σ_guess=[0.2, 1.4, 3.0], μ_bounds=[-1, 1])
+function get_peaks(λ, flux, ν0, Δν; σ_guess=[0.2, 1.4, 3.0], μ_bounds=[-1, 1])
 
-    # Generate theoretical LFC peaks
-    good = findall(isfinite.(λ_estimate) .&& isfinite.(lfc_flux))
-    xi, xf = minimum(good), maximum(good)
-    λi, λf = λ_estimate[xi], λ_estimate[xf]
-    lfc_peak_integers, lfc_centers_λ_theoretical = gen_theoretical_peaks(λi - 10, λf + 10, ν0, Δν)
-    peak_spacing = estimate_peak_spacing(xi, xf, λi, λf, λ_estimate, ν0, Δν)
-    min_peak_spacing = min(peak_spacing(xi), peak_spacing(xf))
-    
-    # Number of pixels
-    nx = length(λ_estimate)
+    # Generate theoretical peaks
+    nx = length(λ)
     xarr = [1:nx;]
-    pfit_estimate = Polynomials.fit(xarr[good], λ_estimate[good], 4)
+    good = findall(isfinite.(λ) .&& isfinite.(flux))
+    xi, xf = minimum(good), maximum(good)
+    λi, λf = λ[xi], λ[xf]
+    integers, centers_λ = gen_theoretical_peaks(λi, λf, ν0, Δν)
 
-    # Background
-    background = estimate_background(λ_estimate, lfc_flux, ν0, Δν)
-    lfc_flux_no_bg = lfc_flux .- background
-    lfc_peak_max = maths.weighted_median(lfc_flux_no_bg, p=0.99)
-    
-    # Continuum
-    continuum = estimate_continuum(λ_estimate, lfc_flux .- background, ν0, Δν)
-    lfc_flux_norm = (lfc_flux .- background) ./ continuum
+    # Ignore first and last peak
+    integers, centers_λ = integers[2:end-1], centers_λ[2:end-1]
+    n_peaks = length(centers_λ)
 
-    # Estimate peaks in pixel space (just indices)
-    peaks, _ = findmaxima(lfc_flux_norm[xrange[1]:xrange[2]], Int(round(0.8*min_peak_spacing)), strict=false)
-    peaks, _ = peakproms(peaks, lfc_flux_norm[xrange[1]:xrange[2]]; strict=false, minprom=0.75, maxprom=nothing)
-    peaks .+= xrange[1] .- 1
-    sort!(peaks)
-    peaks = peaks[2:end-1]
+    # Peak spacing
+    peak_spacing = get_peak_spacing(λ, λi, λf, ν0, Δν)
+    min_peak_spacing = minimum(peak_spacing.(1:nx))
 
-    # Only consider peaks with enough flux
-    good_peaks_int = Int64[]
-    for peak ∈ peaks
-        if lfc_flux_no_bg[peak] >= 0.1 * lfc_peak_max
-            push!(good_peaks_int, peak)
+    # Store pixel peaks
+    centers_pixels = Float64[xarr[maths.nanargminimum(abs.(centers_λ[i] .- λ))] for i=1:n_peaks]
+
+    # First iteratively refine based on centroid just to get the window right
+    for i=1:10
+        for j=1:n_peaks
+
+            # Window
+            use = findall((xarr .>= floor(centers_pixels[j] - peak_spacing(centers_pixels[j]) / 2)) .&& (xarr .<= ceil(centers_pixels[j] + peak_spacing(centers_pixels[j]) / 2)))
+            xx, yy = @views xarr[use], flux[use]
+
+            # Centroid
+            centers_pixels[j] = maths.weighted_mean(xx, yy)
         end
     end
 
-    # Further refine peaks based on centroids
-    good_peaks = zeros(length(good_peaks_int))
-    for i=1:length(good_peaks_int)
-        use = findall((xarr .>= floor(good_peaks_int[i] - peak_spacing(good_peaks_int[i]) / 2)) .&& (xarr .< ceil(good_peaks_int[i] + peak_spacing(good_peaks_int[i]) / 2)))
-        xx, yy = xarr[use], lfc_flux_no_bg[use]
-        good_peaks[i] = maths.weighted_mean(xx, yy)
-    end
+    # Fit results
+    amplitudes = fill(NaN, n_peaks)
+    σs = fill(NaN, n_peaks)
+    offsets = fill(NaN, n_peaks)
+    slopes = fill(NaN, n_peaks)
+    rms = fill(NaN, n_peaks)
 
-    # Once more
-    for i=1:length(good_peaks)
-        use = findall((xarr .>= floor(good_peaks[i] - peak_spacing(good_peaks_int[i]) / 2)) .&& (xarr .< ceil(good_peaks_int[i] + peak_spacing(good_peaks[i]) / 2)))
-        xx, yy = xarr[use], lfc_flux_no_bg[use]
-        good_peaks[i] = maths.weighted_mean(xx, yy)
-    end
+    # Fit peaks
+    for i=1:n_peaks
 
-    # Fit each peak with a Gaussian
-    lfc_centers_pix = fill(NaN, length(good_peaks))
-    amplitudes = fill(NaN, length(good_peaks))
-    rms = fill(NaN, length(good_peaks))
-    σs = fill(NaN, length(good_peaks))
-    offsets = fill(NaN, length(good_peaks))
-    slopes = fill(NaN, length(good_peaks))
-    for i=1:length(good_peaks)
+        # Window
+        use = findall((xarr .>= floor(centers_pixels[i] - peak_spacing(centers_pixels[i]) / 2)) .&& (xarr .<= ceil(centers_pixels[i] + peak_spacing(centers_pixels[i]) / 2)))
+        xx, yy = xarr[use], flux[use]
 
-        # Region to consider
-        use = findall((xarr .>= floor(good_peaks[i] - peak_spacing(good_peaks[i]) / 2)) .&& (xarr .< ceil(good_peaks[i] + peak_spacing(good_peaks[i]) / 2)))
-
-        # Crop data
-        xx, yy = xarr[use], lfc_flux[use]
-
-        # Remove baseline (approx)
+        # Remove approx baseline
         yy .-= nanminimum(yy)
         peak_val = nanmaximum(yy)
 
+        # Pars and bounds
+        p0 = [peak_val, centers_pixels[i], σ_guess[2], 0.1 * peak_val, 0.01 * peak_val]
+        lb = [0.7 * peak_val, centers_pixels[i] + μ_bounds[1], σ_guess[1], -0.5 * peak_val, -0.1 * peak_val]
+        ub = [1.3 * peak_val, centers_pixels[i] + μ_bounds[2], σ_guess[3], 0.5 * peak_val, 0.1 * peak_val]
+
+        # Model
         model = (_, pars) -> begin
             return maths.gauss(xx, pars[1], pars[2], pars[3]) .+ pars[4] .+ pars[5] .* (xx .- nanmean(xx))
         end
 
-        # Pars and bounds
-        u0 = [peak_val, good_peaks[i], σ_guess[2], 0.1 * peak_val, 0.01 * peak_val]
-        lb = [0.7 * peak_val, good_peaks[i] + μ_bounds[1], σ_guess[1], -0.5 * peak_val, -0.1 * peak_val]
-        ub = [1.3 * peak_val, good_peaks[i] + μ_bounds[2], σ_guess[3], 0.5 * peak_val, 0.1 * peak_val]
-        #u0 = [peak_val, good_peaks[i], σ_guess[2], 0.1 * peak_val]
-        #lb = [0.7 * peak_val, good_peaks[i] + μ_bounds[1], σ_guess[1], -0.5 * peak_val]
-        #ub = [1.3 * peak_val, good_peaks[i] + μ_bounds[2], σ_guess[3], 0.5 * peak_val]
-
         # Fit
         try
-            ubest = LsqFit.curve_fit(model, xx, yy, u0, lower=lb, upper=ub)
-            ubest = ubest.param
-            amplitudes[i] = ubest[1]
-            lfc_centers_pix[i] = ubest[2]
-            σs[i] = ubest[3]
-            offsets[i] = ubest[4]
-            slopes[i] = ubest[5]
-            rms[i] = maths.rmsloss(model(xx, ubest), yy)
-            #begin
-            #    scatter(xx, yy)
-            #    scatter(xx, model(xx, ubest))
-            #    plt.show()
-            #end
+            result = LsqFit.curve_fit(model, xx, yy, p0, lower=lb, upper=ub)
+            pbest = result.param
+            amplitudes[i] = pbest[1]
+            centers_pixels[i] = pbest[2]
+            σs[i] = pbest[3]
+            offsets[i] = pbest[4]
+            slopes[i] = pbest[5]
+            rms[i] = maths.rmsloss(model(xx, pbest), yy)
         catch
             nothing
         end
-        
     end
 
-    # Determine which LFC spot matches each peak
-    lfc_centers_λ = Float64[]
-    peak_integers = Int[]
-    for i=1:length(lfc_centers_pix)
-        diffs = abs.(pfit_estimate(lfc_centers_pix[i]) .- lfc_centers_λ_theoretical)
-        k = argmin(diffs)
-        push!(lfc_centers_λ, lfc_centers_λ_theoretical[k])
-        push!(peak_integers, lfc_peak_integers[k])
-    end
-    return lfc_centers_pix, lfc_centers_λ, peak_integers, amplitudes, σs, rms, offsets, slopes
+    # Return
+    return centers_pixels, centers_λ, integers, amplitudes, σs, rms, offsets, slopes
 end
 
-function gen_theoretical_peaks(λi, λf, ν0, Δν)
+
+
+function gen_theoretical_peaks(λi::Real, λf::Real, ν0::Real, Δν::Real, n_left=10_000, n_right=10_000)
 
     # Generate the frequency grid
-    n_left, n_right = 10_000, 10_000
-    lfc_centers_freq_theoretical = [ν0 - n_left * Δν:Δν:ν0 + (n_right + 1) * Δν;]
-    integers = [-n_left:n_right + 1;]
+    centers_ν = [ν0 - n_left * Δν:Δν:ν0 + (n_right + 1) * Δν;]
+    integers = [-n_left:n_right;]
 
     # Convert to wavelength
-    lfc_centers_λ_theoretical = 299792458.0 ./ lfc_centers_freq_theoretical
-    reverse!(lfc_centers_λ_theoretical)
-    lfc_centers_λ_theoretical .*= 1E9
+    centers_λ = SPEED_OF_LIGHT_MPS ./ centers_ν
+    reverse!(centers_λ)
+    centers_λ .*= 1E9 # meters to nm
     reverse!(integers)
 
     # Only peaks within the bounds
-    good = findall((lfc_centers_λ_theoretical .> λi - 0.1) .&& (lfc_centers_λ_theoretical .< λf + 0.1))
-    lfc_centers_λ_theoretical = lfc_centers_λ_theoretical[good]
+    good = findall((centers_λ .> λi) .&& (centers_λ .< λf))
+    centers_λ = centers_λ[good]
     integers = integers[good]
 
-    return integers, lfc_centers_λ_theoretical
+    # Return
+    return integers, centers_λ
 end
 
-function estimate_background(lfc_λ, lfc_flux, ν0, Δν)
-    good = findall(isfinite.(lfc_λ) .&& isfinite.(lfc_λ))
+function estimate_background(λ, flux, ν0, Δν)
+
+    # Good data
+    nx = length(λ)
+    good = findall(isfinite.(λ) .&& isfinite.(flux))
     xi, xf = minimum(good), maximum(good)
-    λi, λf = lfc_λ[xi], lfc_λ[xf]
-    peak_spacing = estimate_peak_spacing(xi, xf, λi, λf, lfc_λ, ν0, Δν)
-    min_peak_spacing = min(peak_spacing(xi), peak_spacing(xf))
-    background = maths.generalized_median_filter1d(lfc_flux, width=Int(round(2 * min_peak_spacing)), p=0.01)
-    background .= maths.poly_filter([1:length(lfc_flux);], background, width=3 * (peak_spacing(xi) + peak_spacing(xf)) / 2, deg=3)
+    λi, λf = λ[xi], λ[xf]
+
+    # Estimate peak spacing
+    peak_spacing = get_peak_spacing(λ, λi, λf, ν0, Δν)
+    min_peak_spacing = minimum(peak_spacing.(1:nx))
+
+    # Get background using minima
+    background = maths.generalized_median_filter1d(flux, width=Int(round(2 * min_peak_spacing)), p=0.01)
+
+    # Smooth
+    background .= maths.poly_filter([1:nx;], background, width=3 * (peak_spacing(xi) + peak_spacing(xf)) / 2, deg=2)
+
+    # Return
     return background
 end
 
-function estimate_continuum(lfc_λ, lfc_flux, ν0, Δν)
-    good = findall(isfinite.(lfc_λ) .&& isfinite.(lfc_λ))
+function estimate_continuum(λ, flux, ν0, Δν)
+
+    # Good data
+    nx = length(λ)
+    good = findall(isfinite.(λ) .&& isfinite.(flux))
     xi, xf = minimum(good), maximum(good)
-    λi, λf = lfc_λ[xi], lfc_λ[xf]
-    peak_spacing = estimate_peak_spacing(xi, xf, λi, λf, lfc_λ, ν0, Δν)
-    min_peak_spacing = min(peak_spacing(xi), peak_spacing(xf))
-    continuum = maths.generalized_median_filter1d(lfc_flux, width=Int(round(2 * min_peak_spacing)), p=0.99)
+    λi, λf = λ[xi], λ[xf]
+
+    # Estimate peak spacing
+    peak_spacing = get_peak_spacing(λ, λi, λf, ν0, Δν)
+    min_peak_spacing = minimum(peak_spacing.(1:nx))
+
+    # Get background using minima
+    continuum = maths.generalized_median_filter1d(flux, width=Int(round(2 * min_peak_spacing)), p=0.99)
+
+    # Smooth
+    continuum .= maths.poly_filter([1:nx;], background, width=6 * (peak_spacing(xi) + peak_spacing(xf)) / 2, deg=2)
+
+    # Return
     return continuum
 end
