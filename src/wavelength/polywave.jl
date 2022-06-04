@@ -142,3 +142,28 @@ function fit_peaks_cc2d(pixel_centers, orders, λ_centers, weights, max_pixel, m
     # Return
     return coeffs_best, good_peaks
 end
+
+"""
+get_chebvals(pixels, orders, max_pixel::Real, max_order::Real, deg_intra_order::Int, deg_inter_order::Int)
+A standard median filter where x_out[i, j] = median(x[i-w2:i+w2, j-w2:j+w2]) where w2 = ceil(width / 2).
+"""
+function get_chebvals(pixels, orders, max_pixel::Real, max_order::Real, deg_intra_order::Int, deg_inter_order::Int)
+    chebs_pixels = Vector{Float64}[]
+    chebs_orders = Vector{Float64}[]
+    @assert length(pixels) == length(orders)
+    for i=1:length(pixels)
+        push!(chebs_pixels, get_chebvals(pixels[i] / max_pixel, deg_intra_order))
+        push!(chebs_orders, get_chebvals(orders[i] / max_order, deg_inter_order))
+    end
+    return chebs_pixels, chebs_orders
+end
+
+function get_chebvals(x::Real, n::Int)
+    chebvals = zeros(n+1)
+    for i=1:n+1
+        coeffs = zeros(n+1)
+        coeffs[i] = 1.0
+        chebvals[i] = ChebyshevT(coeffs).(x)
+    end
+    return chebvals
+end
