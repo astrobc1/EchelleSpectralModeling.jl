@@ -13,7 +13,7 @@ function compute_obj(obj::Chi2, pars::Parameters, data::SpecData1d, model::Spect
         n_good = sum(data.data.mask)
         n_flag = Int(round(0.02 * n_good))
         ν = n_good - num_varied(pars)
-        redχ² = maths.redchi2loss(data.data.flux, model_flux, data.data.fluxerr, data.data.mask, flag_worst=n_flag, remove_edges=4, ν=ν)
+        redχ² = maths.redχ2loss(data.data.flux .- model_flux, data.data.fluxerr, data.data.mask, flag_worst=n_flag, remove_edges=4, ν=ν)
         return redχ²
     catch
         return 1000
