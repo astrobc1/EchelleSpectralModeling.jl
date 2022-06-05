@@ -207,7 +207,7 @@ function optimize_observation(p0, data, model, obj, iteration; verbose=true)
     opt_result = (;pbest=p0, fbest=NaN, fcalls=0)
 
     try
-        opt_result = IterativeNelderMead.optimize(IterativeNelderMead.IterativeNelderMeadOptimizer(), p0, obj_wrapper)
+        opt_result = IterativeNelderMead.optimize(obj_wrapper, p0, IterativeNelderMead.IterativeNelderMeadOptimizer())
     catch
         opt_result = (;pbest=p0, fbest=NaN, fcalls=0)
     end
