@@ -1,5 +1,6 @@
 using NaNStatistics
 using Polynomials
+using IterativeNelderMead
 
 using EchelleBase
 using EchelleSpectralModeling

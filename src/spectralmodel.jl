@@ -2,6 +2,7 @@ export AbstractSpectralForwardModel, SpectralForwardModel, load_templates!, get_
 
 using EchelleBase
 using EchelleSpectralModeling
+using IterativeNelderMead
 
 abstract type AbstractSpectralForwardModel end
 

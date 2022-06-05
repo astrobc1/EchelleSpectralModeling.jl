@@ -1,5 +1,6 @@
 using EchelleBase
 using EchelleSpectralModeling
+using IterativeNelderMead
 
 export APrioriλSolution
 

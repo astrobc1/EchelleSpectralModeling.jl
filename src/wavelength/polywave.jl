@@ -2,6 +2,7 @@ using SpecialMatrices
 
 using EchelleBase
 using EchelleSpectralModeling
+using IterativeNelderMead
 
 using PyCall
 using LsqFit

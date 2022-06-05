@@ -5,6 +5,7 @@ using DelimitedFiles
 using DataFrames
 using NaNStatistics
 using Infiltrator
+using IterativeNelderMead
 using Distributed
 
 using EchelleBase
@@ -206,7 +207,7 @@ function optimize_observation(p0, data, model, obj, iteration; verbose=true)
     opt_result = (;pbest=p0, fbest=NaN, fcalls=0)
 
     try
-        opt_result = IterativeNelderMead.optimize(IterativeNelderMeadOptimizer(), p0, obj_wrapper)
+        opt_result = IterativeNelderMead.optimize(IterativeNelderMead.IterativeNelderMeadOptimizer(), p0, obj_wrapper)
     catch
         opt_result = (;pbest=p0, fbest=NaN, fcalls=0)
     end

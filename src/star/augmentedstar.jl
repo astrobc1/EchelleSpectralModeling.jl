@@ -1,4 +1,5 @@
 using EchelleBase
+using IterativeNelderMead
 using EchelleSpectralModeling
 
 export AugmentedStar

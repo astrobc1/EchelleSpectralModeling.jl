@@ -3,6 +3,7 @@ using DataInterpolations
 
 using EchelleBase
 using EchelleSpectralModeling
+using IterativeNelderMead
 
 using Infiltrator
 

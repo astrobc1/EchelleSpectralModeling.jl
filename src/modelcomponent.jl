@@ -1,5 +1,6 @@
 using DataFrames
 using CSV
+using IterativeNelderMead
 
 export SpectralModelComponent, load_template, build, get_init_parameters
 

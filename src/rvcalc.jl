@@ -3,6 +3,7 @@ using EchelleSpectralModeling
 using DataInterpolations
 using Infiltrator
 using Calculus
+using IterativeNelderMead
 using Statistics
 using NaNStatistics
 
