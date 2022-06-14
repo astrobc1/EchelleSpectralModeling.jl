@@ -91,7 +91,7 @@ function build_λsolution_chebyval2d_flat(chebs_pixels, chebs_orders, coeffs, or
     return λ
 end
 
-function fit_peaks_cc2d(pixel_centers, orders, λ_centers, weights, max_pixel, max_order, nx, deg_inter_order, deg_intra_order, n_iterations=1, max_vel_cut=200)
+function fit_peaks_cheb2d(pixel_centers, orders, λ_centers, weights, max_pixel, max_order, nx, deg_inter_order, deg_intra_order, n_iterations=1, max_vel_cut=200)
 
     # Initial params and weights
     p0 = ones((deg_inter_order + 1) * (deg_intra_order + 1)) / 100
@@ -112,7 +112,7 @@ function fit_peaks_cc2d(pixel_centers, orders, λ_centers, weights, max_pixel, m
         λ_centers_running[bad] .= 0
 
         # Chebs
-        chebs_pixels, chebs_orders = maths.get_chebvals(pixel_centers_running, orders, max_pixel, max_order, deg_intra_order, deg_inter_order)
+        chebs_pixels, chebs_orders = get_chebvals(pixel_centers_running, orders, max_pixel, max_order, deg_intra_order, deg_inter_order)
         
         # Loss
         loss = (coeffs) -> begin
