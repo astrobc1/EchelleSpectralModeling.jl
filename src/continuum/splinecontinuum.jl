@@ -1,7 +1,7 @@
 using NaNStatistics
 using Polynomials
 using DataInterpolations
-using IterativeNelderMead
+using CurveFitParameters
 
 using EchelleBase
 using EchelleSpectralModeling

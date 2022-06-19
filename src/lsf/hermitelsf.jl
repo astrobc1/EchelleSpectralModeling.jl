@@ -1,5 +1,5 @@
 using EchelleBase
-using IterativeNelderMead
+using CurveFitParameters
 using EchelleSpectralModeling
 
 export HermiteLSF, get_kernel_λ

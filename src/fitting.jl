@@ -6,6 +6,7 @@ using DataFrames
 using NaNStatistics
 using Infiltrator
 using IterativeNelderMead
+using CurveFitParameters
 using Distributed
 
 using EchelleBase
@@ -202,14 +203,21 @@ function optimize_observation(p0, data, model, obj, iteration; verbose=true)
     # Time the fit
     ti = time()
 
-    # Fit
-    obj_wrapper = (pars) -> compute_obj(obj, pars, data, model)
-    opt_result = (;pbest=p0, fbest=NaN, fcalls=0)
+    # Parameters as vectors
+    vecs = to_vecs(p0)
+
+    # Wrapper
+    ptest = deepcopy(p0)
+    obj_wrapper = (x) -> begin
+        set_values!(ptest, x)
+        return compute_obj(obj, pars, data, model)
+    end
+    opt_result = (;pbest=p0, fbest=NaN, fcalls=0, simplex=nothing, iteration=0)
 
     try
-        opt_result = IterativeNelderMead.optimize(obj_wrapper, p0, IterativeNelderMead.IterativeNelderMeadOptimizer())
+        opt_result = IterativeNelderMead.optimize(obj_wrapper, vecs.values, IterativeNelderMead.IterativeNelderMeadOptimizer(), lower_bounds=vecs.lower_bounds, upper_bounds=vecs.upper_bounds, vary=vecs.vary)
     catch
-        opt_result = (;pbest=p0, fbest=NaN, fcalls=0)
+        nothing
     end
 
     # Print results

@@ -1,6 +1,6 @@
 using DataFrames
 using CSV
-using IterativeNelderMead
+using CurveFitParameters
 
 export SpectralModelComponent, load_template, build, get_init_parameters
 

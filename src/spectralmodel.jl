@@ -2,7 +2,7 @@ export AbstractSpectralForwardModel, SpectralForwardModel, load_templates!, get_
 
 using EchelleBase
 using EchelleSpectralModeling
-using IterativeNelderMead
+using CurveFitParameters
 
 abstract type AbstractSpectralForwardModel end
 

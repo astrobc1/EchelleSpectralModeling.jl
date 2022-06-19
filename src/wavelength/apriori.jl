@@ -1,6 +1,6 @@
 using EchelleBase
 using EchelleSpectralModeling
-using IterativeNelderMead
+using CurveFitParameters
 
 export APrioriλSolution
 

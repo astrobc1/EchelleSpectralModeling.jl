@@ -1,7 +1,7 @@
 module GasCells
 
 using NPZ
-using IterativeNelderMead
+using CurveFitParameters
 
 using EchelleBase
 using EchelleSpectralModeling

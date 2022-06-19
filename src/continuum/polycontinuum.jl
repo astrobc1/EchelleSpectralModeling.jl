@@ -1,6 +1,6 @@
 using NaNStatistics
 using Polynomials
-using IterativeNelderMead
+using CurveFitParameters
 
 using EchelleBase
 using EchelleSpectralModeling

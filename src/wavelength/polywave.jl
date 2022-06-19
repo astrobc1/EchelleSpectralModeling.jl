@@ -2,7 +2,7 @@ using SpecialMatrices
 
 using EchelleBase
 using EchelleSpectralModeling
-using IterativeNelderMead
+using CurveFitParameters
 
 using PyCall
 using LsqFit
