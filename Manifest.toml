@@ -283,7 +283,7 @@ version = "4.1.1"
 
 [[deps.CurveFitParameters]]
 deps = ["DataStructures"]
-git-tree-sha1 = "72ee1d1d611416092ac802e866442e5d08f0ecd3"
+git-tree-sha1 = "32c41e5c2eb27c57392e441ac295c6de697bd973"
 repo-rev = "master"
 repo-url = "https://github.com/astrobc1/CurveFitParameters.jl"
 uuid = "75b670ed-29d0-4b9b-bcd2-edac41b9c208"
@@ -417,8 +417,8 @@ uuid = "732a3c5d-d6c0-58bc-adb1-1b51709a25e2"
 version = "0.7.1"
 
 [[deps.EchelleBase]]
-deps = ["DataFrames", "DataInterpolations", "DataStructures", "FITSIO", "Infiltrator", "LinearAlgebra", "LoopVectorization", "NaNStatistics", "Pkg", "Polynomials", "PyCall", "Reexport", "Statistics", "StatsBase"]
-git-tree-sha1 = "5bf58c6b69882bf4cd43332433b4bab7162097ad"
+deps = ["CurveFitParameters", "DataFrames", "DataInterpolations", "DataStructures", "FITSIO", "Infiltrator", "LinearAlgebra", "LoopVectorization", "NaNStatistics", "Pkg", "Polynomials", "PyCall", "Reexport", "Statistics", "StatsBase"]
+git-tree-sha1 = "27e3446319562d492c671c61b133335c578b27db"
 repo-rev = "master"
 repo-url = "https://github.com/astrobc1/EchelleBase.jl"
 uuid = "fb2f92b1-9968-41b4-8835-2765b866fa7d"

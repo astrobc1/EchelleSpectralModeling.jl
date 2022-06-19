@@ -210,7 +210,7 @@ function optimize_observation(p0, data, model, obj, iteration; verbose=true)
     ptest = deepcopy(p0)
     obj_wrapper = (x) -> begin
         set_values!(ptest, x)
-        return compute_obj(obj, pars, data, model)
+        return compute_obj(obj, ptest, data, model)
     end
     opt_result = (;pbest=p0, fbest=NaN, fcalls=0, simplex=nothing, iteration=0)
 
