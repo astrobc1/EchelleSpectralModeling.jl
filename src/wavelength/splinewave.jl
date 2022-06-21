@@ -16,7 +16,7 @@ end
 SplineλSolution(;n_splines, bounds) = SplineλSolution(n_splines, bounds)
 
 function get_pixel_lagrange_points(m::SplineλSolution, sregion)
-    return Int.(round(collect(range(sregion.pixmin+1, sregion.pixmax-1, length=m.n_splines + 1))))
+    return Int.(round.(collect(range(sregion.pixmin+1, sregion.pixmax-1, length=m.n_splines + 1))))
 end
 
 function get_λ_lagrange_zero_points(m::SplineλSolution, sregion, λ_estimate)
