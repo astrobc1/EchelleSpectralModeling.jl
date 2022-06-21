@@ -36,6 +36,6 @@ function EchelleSpectralModeling.build(m::SplineContinuum, pars::Parameters, sre
 end
 
 function EchelleSpectralModeling.build(m::SplineContinuum, λs, knots, λ_out)
-    continuum = maths.CubicSpline(λs, knots).(λ_out)
+    continuum = maths.cspline_interp(λs, knots, λ_out)
     return continuum
 end
