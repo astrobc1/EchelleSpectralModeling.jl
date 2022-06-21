@@ -16,7 +16,7 @@ end
 SplineλSolution(;n_splines, bounds) = SplineλSolution(n_splines, bounds)
 
 function get_pixel_lagrange_points(m::SplineλSolution, sregion)
-    return collect(range(sregion.pixmin+1, sregion.pixmax-1, length=m.n_splines + 1))
+    return Int.(collect(range(sregion.pixmin+1, sregion.pixmax-1, length=m.n_splines + 1)))
 end
 
 function get_λ_lagrange_zero_points(m::SplineλSolution, sregion, λ_estimate)
@@ -33,7 +33,7 @@ function EchelleSpectralModeling.build(m::SplineλSolution, data::SpecData1d, pa
 end
 
 function EchelleSpectralModeling.build(m::SplineλSolution, xs::AbstractVector, λs::AbstractVector, nx::Int)
-    λ = maths.cspline_interp(xs, λs, [1.0:nx;])
+    λ = maths.cspline_interp(float.(xs), λs, [1.0:nx;])
     return λ
 end
 
