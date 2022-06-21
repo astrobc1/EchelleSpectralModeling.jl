@@ -1,5 +1,4 @@
-using DataFrames
-using CSV
+using DelimitedFiles
 using CurveFitParameters
 
 export SpectralModelComponent, load_template, build, get_init_parameters
@@ -13,8 +12,8 @@ function load_template(m::SpectralModelComponent, λ_out)
 end
 
 function load_template(fname, λ_out)
-    df = DataFrame(CSV.File(fname, comment="#", header=false))
-    λ, flux = df.Column1, df.Column2
+    f = readdlm(fname, ',', comments=true)
+    λ, flux = f[:, 1], f[:, 2]
     λi, λf = λ_out[1], λ_out[end]
     good = findall((λ .> λi) .& (λ .< λf))
     flux_out = maths.cspline_interp(λ[good], flux[good], λ_out)

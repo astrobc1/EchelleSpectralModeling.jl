@@ -1,5 +1,4 @@
 using SpecialMatrices
-using DataInterpolations
 
 using EchelleBase
 using EchelleSpectralModeling
@@ -34,7 +33,7 @@ function EchelleSpectralModeling.build(m::SplineλSolution, data::SpecData1d, pa
 end
 
 function EchelleSpectralModeling.build(m::SplineλSolution, xs::AbstractVector, λs::AbstractVector, nx::Int)
-    λ = DataInterpolations.CubicSpline(λs, xs).([1.0:nx;])
+    λ = maths.CubicSpline(xs, λs).([1.0:nx;])
     return λ
 end
 

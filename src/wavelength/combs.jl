@@ -1,11 +1,9 @@
 using EchelleBase
 using NaNStatistics
 using Polynomials
-using Peaks
 using Infiltrator
 using PyPlot
-using Zygote
-using ModelingToolkit, Optim, GalacticOptim, GalacticOptimJL
+using LsqFit
 
 SPEED_OF_LIGHT_MPS = 299792458.0
 

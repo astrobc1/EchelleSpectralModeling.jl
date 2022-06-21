@@ -1,6 +1,5 @@
 using NaNStatistics
 using Polynomials
-using DataInterpolations
 using CurveFitParameters
 
 using EchelleBase
@@ -37,6 +36,6 @@ function EchelleSpectralModeling.build(m::SplineContinuum, pars::Parameters, sre
 end
 
 function EchelleSpectralModeling.build(m::SplineContinuum, λs, knots, λ_out)
-    continuum = DataInterpolations.CubicSpline(knots, λs).(λ_out)
+    continuum = maths.CubicSpline(λs, knots).(λ_out)
     return continuum
 end

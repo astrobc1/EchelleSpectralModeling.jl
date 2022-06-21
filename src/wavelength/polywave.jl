@@ -5,10 +5,7 @@ using EchelleSpectralModeling
 using CurveFitParameters
 
 using PyCall
-using LsqFit
 using Infiltrator
-using ForwardDiff
-using Flux
 using Statistics
 
 export PolyλSolution
