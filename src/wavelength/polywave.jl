@@ -150,18 +150,8 @@ function get_chebvals(pixels, orders, max_pixel::Real, max_order::Real, deg_intr
     chebs_orders = Vector{Float64}[]
     @assert length(pixels) == length(orders)
     for i=1:length(pixels)
-        push!(chebs_pixels, get_chebvals(pixels[i] / max_pixel, deg_intra_order))
-        push!(chebs_orders, get_chebvals(orders[i] / max_order, deg_inter_order))
+        push!(chebs_pixels, maths.get_chebvals(pixels[i] / max_pixel, deg_intra_order))
+        push!(chebs_orders, maths.get_chebvals(orders[i] / max_order, deg_inter_order))
     end
     return chebs_pixels, chebs_orders
-end
-
-function get_chebvals(x::Real, n::Int)
-    chebvals = zeros(n+1)
-    for i=1:n+1
-        coeffs = zeros(n+1)
-        coeffs[i] = 1.0
-        chebvals[i] = ChebyshevT(coeffs).(x)
-    end
-    return chebvals
 end

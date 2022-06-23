@@ -28,7 +28,6 @@ function plot_spectrum_fit(data, model, pars, iteration::Int, output_path::Strin
     pad = 0.01 * (maximum(data_λ[good]) - minimum(data_λ[good]))
 
     pygui(false)
-    plt.style.use((@__DIR__)[1:end-3] * "gadfly_stylesheet.mplstyle")
     
     # Plot data
     figure(figsize=(10, 3), dpi=200)

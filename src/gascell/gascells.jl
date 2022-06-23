@@ -14,7 +14,7 @@ struct GasCell <: SpectralModelComponent
     depth_guess::Vector{Float64}
 end
 
-GasCell(;input_file, shift_guess=[0,0,0], depth_guess=[1,1,1]) = GasCell(input_file, shift_guess, depth_guess)
+GasCell(;input_file, shift_guess=[0.0, 0.0, 0.0], depth_guess=[1.0, 1.0, 1.0]) = GasCell(input_file, shift_guess, depth_guess)
 
 function EchelleSpectralModeling.build(m::GasCell, pars, templates)
     return build(m, templates["λ"], templates["gascell"], pars["gascell_depth"].value, pars["gascell_shift"].value)
