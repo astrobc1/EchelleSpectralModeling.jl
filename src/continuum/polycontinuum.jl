@@ -35,3 +35,10 @@ function EchelleSpectralModeling.build(m::PolyContinuum, coeffs::Vector, λ_out;
     y = Polynomial(coeffs).(λ_out .- λ0)
     return y
 end
+
+function estimate_continuum(x, flux; med_filter_width, poly_filter_width, p=0.98)
+    #good = findall(isfinite.(x) .&& isfinite.(flux))
+    continuum = maths.generalized_median_filter1d(flux, width=med_filter_width, p=p)
+    continuum .= maths.poly_filter(x, continuum, width=poly_filter_width, deg=2)
+    return continuum
+end
