@@ -25,7 +25,7 @@ include("spectralmodel.jl")
 
 include("plotting.jl")
 
-include("rvcalc.jl")
+include("rvcalc/rvcalc.jl")
 
 include("objectives/objectives.jl")
 @reexport using .SpectralModelObjectiveFunctions

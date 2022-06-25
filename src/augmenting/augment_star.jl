@@ -54,19 +54,6 @@ function augment_star!(ensemble::IterativeSpectralRVEnsembleProblem, opt_results
             weights_lr = ensemble.data[i].data.mask ./ rms^2
             bad = findall(.~isfinite.(weights_lr))
             weights_lr[bad] .= 0
-
-            # Telluric mask
-            if !isnothing(ensemble.model.tellurics) && hasproperty(ensemble.model.tellurics, :mask) && ensemble.model.tellurics.mask
-                tell_flux = build(ensemble.model.tellurics, pars, model.templates["tellurics"], data_λ)
-                tell_flux .= maths.doppler_shift_flux(data_λ, tell_flux, vel)
-                if !isnothing(ensemble.model.lsf)
-                    kernel = build(ensemble.model.lsf, ensemble.model.templates["λrel"])
-                    tell_flux .= maths.convolve1d(tell_flux, kernel)
-                    tell_flux ./= nanmaximum(tell_flux)
-                end
-                bad = findall(tell_flux .< 0.99)
-                weights_lr[bad] .= 0
-            end
             
             # Interpolate to a high res grid
             weights_hr = maths.lin_interp(λ_star_rest, weights_lr, star_λ)

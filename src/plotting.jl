@@ -122,7 +122,7 @@ function plot_rvs(ensemble, rvs, iteration, output_path; time_offset=2450000)
 
     # Individual XC
     if "rvsxc" ∈ keys(rvs)
-        plot(rvs["bjds"] .- time_offset, rvs["rvsxc"][:, iteration] ./ 1E3, marker="X", linewidth=0, color="black", alpha=0.5, label="XC")
+        errorbar(rvs["bjds"] .- time_offset, rvs["rvsxc"][:, iteration] ./ 1E3, marker="X", linewidth=0, elinewidth=1, color="black", alpha=0.5, label="XC")
     end
     
     # Plot labels

@@ -80,7 +80,7 @@ function EchelleSpectralModeling.load_template(m::TAPASTellurics, λ_out)
     return _load_template(m.input_file, λ_out)
 end
 
-function EchelleSpectralModeling.get_init_parameters(m::TAPASTellurics, data, sregion)
+function EchelleSpectralModeling.get_init_parameters(m::TAPASTellurics, data::SpecData1d, sregion::SpecRegion1d)
     pars = Parameters()
     pars["water_depth"] = Parameter(value=m.water_depth_guess[2], lower_bound=m.water_depth_guess[1], upper_bound=m.water_depth_guess[3])
     pars["airmass_depth"] = Parameter(value=m.airmass_depth_guess[2], lower_bound=m.airmass_depth_guess[1], upper_bound=m.airmass_depth_guess[3])
@@ -88,10 +88,10 @@ function EchelleSpectralModeling.get_init_parameters(m::TAPASTellurics, data, sr
     return pars
 end
 
-function get_mask(m::TAPASTellurics, pars, templates, kernel=nothing, λ_out=nothing)
+function get_mask(m::TAPASTellurics, pars::Parameters, templates, kernel=nothing, λ_out=nothing)
     tell_flux = build(m, pars, templates)
     if !isnothing(kernel)
-        tell_flux .= maths.convole1d(tell_flux, kernel)
+        tell_flux .= maths.convolve1d(tell_flux, kernel)
         tell_flux ./= nanmaximum(tell_flux)
     end
     if isnothing(λ_out)

@@ -38,6 +38,12 @@ function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, 
     rvs["bc_vels"] = [d.header["bc_vel"] for d ∈ ensemble.data]
     rvs["rvsfwm"] = fill(NaN, (length(ensemble), n_iterations))
 
+    # CCF
+    if do_ccf
+        rvs["rvsxc"] = fill(NaN, (length(ensemble), n_iterations))
+        rvs["rvsxcerr"] = fill(NaN, (length(ensemble), n_iterations))
+    end
+
     # Opt results (vector of vector of named tuples)
     opt_results = Vector{NamedTuple}[]
 
@@ -121,9 +127,17 @@ function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, 
             # Run the fit for all spectra and do a cross correlation analysis as well.
             _opt_results = optimize_all_observations(ensemble, p0s, iteration, output_path; verbose=verbose)
             push!(opt_results, _opt_results)
+
+            # Cross correlation
+            if do_ccf
+                p0s = [res.pbest for res ∈ _opt_results]
+                ccf_results = cross_correlate_spectra(ensemble, p0s)
+                rvs["rvsxc"][:, iteration] .= [res[1] + d.header["bc_vel"] for (d, res) ∈ zip(ensemble.data, ccf_results)]
+                rvs["rvsxcerr"][:, iteration] .= [res[2] for res ∈ ccf_results]
+            end
         
             # Store and plot rvs
-            rvs["rvsfwm"][:, iteration] = [res.pbest["vel_star"].value + d.header["bc_vel"] for (d, res) ∈ zip(ensemble.data, _opt_results)]
+            rvs["rvsfwm"][:, iteration] .= [res.pbest["vel_star"].value + d.header["bc_vel"] for (d, res) ∈ zip(ensemble.data, _opt_results)]
             save_rvs(ensemble, rvs, output_path)
             plot_rvs(ensemble, rvs, iteration, output_path)
         
@@ -165,9 +179,6 @@ end
 ##########################
 
 function optimize_all_observations(ensemble::IterativeSpectralRVEnsembleProblem, p0s, iteration::Int, output_path::String; verbose::Bool)
-            
-    # Timer
-    ti = time()
 
     # Opt results (vector of named tuples)
     if nprocs() > 1
@@ -179,9 +190,6 @@ function optimize_all_observations(ensemble::IterativeSpectralRVEnsembleProblem,
             optimize_and_plot_observation(p0s[i], ensemble.data[i], ensemble.model, ensemble.obj, iteration, output_path)
         end
     end
-
-
-    println("Finished Iteration $(iteration) in $(round((time() - ti) / 60, sigdigits=3)) min")
 
     # Return
     return opt_results
@@ -237,6 +245,27 @@ function optimize_observation(p0, data, model, obj, iteration; verbose=true)
     # Return
     return opt_result
 
+end
+
+#############
+#### CCF ####
+#############
+
+function cross_correlate_spectra(ensemble::IterativeSpectralRVEnsembleProblem, p0s; vel_window_coarse=200_000, vel_step_coarse=100, vel_step_fine=10, vel_window_fine=1000)
+
+    # CCF in series or parallel
+    if nprocs() > 1
+        ccf_results = pmap(1:length(ensemble.data)) do i
+            brute_force_ccf(ensemble.model, ensemble.data[i], p0s[i], vel_window_coarse=vel_window_coarse, vel_step_coarse=vel_step_coarse, vel_step_fine=vel_step_fine, vel_window_fine=vel_window_fine)
+        end
+    else
+        ccf_results = map(1:length(ensemble.data)) do i
+            brute_force_ccf(ensemble.model, ensemble.data[i], p0s[i], vel_window_coarse=vel_window_coarse, vel_step_coarse=vel_step_coarse, vel_step_fine=vel_step_fine, vel_window_fine=vel_window_fine)
+        end
+    end
+
+    # Return
+    return ccf_results
 end
 
 ##############

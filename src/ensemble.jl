@@ -42,7 +42,7 @@ function IterativeSpectralRVEnsembleProblem(;spectrograph::String, data_input_pa
     if string(data_input_path[end]) != Base.Filesystem.path_separator
         data_input_path *= Base.Filesystem.path_separator
     end
-    data = [SpecData1d(data_input_path * fname, spectrograph, model.sregion) for fname ∈ eachline(data_input_path * filelist)]
+    data = [SpecData1d(data_input_path * fname, spectrograph, model.sregion) for fname ∈ eachline(data_input_path * filelist) if !startswith(fname, "#")]
     jds = [parse_exposure_start_time(d) for d ∈ data]
     ss = sortperm(jds)
     data .= data[ss]
