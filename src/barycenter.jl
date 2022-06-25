@@ -4,6 +4,12 @@ using EchelleBase
 
 export compute_barycentric_corrections
 
+"""
+    compute_barycentric_corrections(data::SpecData, star_name=nothing, obs_name=nothing; store=true)
+    compute_barycentric_corrections(jdmid::Float64, obs_name::String, star_name::String)
+Compute the barycentric corrections using barycorrpy for the observation `data`. The `star_name` must be a recognized by simbad. If `store=true`, the variable data.header is updated with the BJD and velocity correction (bjd) and (bc_vel).
+Returns the BJD and velocity correction as a tuple.
+"""
 function compute_barycentric_corrections(data::SpecData, star_name=nothing, obs_name=nothing; store=true)
     if isnothing(star_name)
         spec_mod = get_spec_module(data)
@@ -23,7 +29,7 @@ function compute_barycentric_corrections(data::SpecData, star_name=nothing, obs_
         data.header["bjd"] = bjd
         data.header["bc_vel"] = bc_vel
     end
-    return nothing
+    return bjd, bc_vel
 end
 
 function compute_barycentric_corrections(jdmid::Float64, obs_name::String, star_name::String)

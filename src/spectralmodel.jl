@@ -4,9 +4,27 @@ using EchelleBase
 using EchelleSpectralModeling
 using CurveFitParameters
 
+"""
+    AbstractSpectralForwardModel
+Abstract type for a spectral forward model.
+"""
 abstract type AbstractSpectralForwardModel end
 
-struct SpectralForwardModel{S, T, G, W, P, C} <: AbstractSpectralForwardModel
+"""
+    SpectralForwardModel{S<:SpectralModelComponent, T<:SpectralModelComponent, G<:SpectralModelComponent, W<:SpectralModelComponent, P<:SpectralModelComponent, C<:SpectralModelComponent}
+# Primary container for a spectral forward model which models the star, tellurics, the continuum, the wavelength solution, a gas cell (optional), and the line spread function. The wavelength solution may be static using APrioriλSolution.
+# Fields:
+- `star`::SpectralModelComponent` The stellar model.
+- `tellurics::SpectralModelComponent` The telluric model. Optional.
+- `gascell::SpectralModelComponent` The gas cell model. Optional.
+- `λsolution::SpectralModelComponent` The wavelength solution model.
+- `lsf::SpectralModelComponent` The line spread function model.
+- `continuum::SpectralModelComponent` The continuum model.
+- `sregion::SpecRegion1d` The spectral region for this model.
+- `oversample::Int` The oversampleing factor of the model.
+- `templates::Dict{String, Array{Float64}}` Contains any templates.
+"""
+struct SpectralForwardModel{S<:SpectralModelComponent, T<:Union{SpectralModelComponent, Nothing}, G<:Union{SpectralModelComponent, Nothing}, W<:SpectralModelComponent, P<:Union{SpectralModelComponent, Nothing}, C<:Union{SpectralModelComponent, Nothing}} <: AbstractSpectralForwardModel
     star::S
     tellurics::T
     gascell::G
@@ -18,6 +36,11 @@ struct SpectralForwardModel{S, T, G, W, P, C} <: AbstractSpectralForwardModel
     templates::Dict{String, Array{Float64}}
 end
 
+
+"""
+    SpectralForwardModel(;star=nothing, tellurics=nothing, gascell=nothing, λsolution=nothing, lsf=nothing, continuum=nothing, sregion, oversample)
+Construct a SpectralForwardModel object.
+"""
 function SpectralForwardModel(;star=nothing, tellurics=nothing, gascell=nothing, λsolution=nothing, lsf=nothing, continuum=nothing, sregion, oversample)
     return SpectralForwardModel(star, tellurics, gascell, λsolution, lsf, continuum, sregion, oversample, Dict{String, Array{Float64}}())
 end
@@ -39,6 +62,10 @@ function get_model_λ_grid(m::SpectralForwardModel, data; pad=2)
     return λ
 end
 
+"""
+    build(m::SpectralForwardModel, pars::Parameters, data; interp=true)
+Builds the model for a given set of parameters and given observation.
+"""
 function build(m::SpectralForwardModel, pars::Parameters, data; interp=true)
         
     # Get model wave grid
@@ -92,6 +119,10 @@ function build(m::SpectralForwardModel, pars::Parameters, data; interp=true)
 
 end
 
+"""
+    get_init_parameters(m::SpectralForwardModel, data)
+Gets the initial parameters for a given observation.
+"""
 function get_init_parameters(m::SpectralForwardModel, data)
     pars = Parameters()
     if !isnothing(m.star)
@@ -125,7 +156,11 @@ function get_varied_parameters(pars)
     return vp
 end
 
-function load_templates(m::SpectralForwardModel, data)
+"""
+    load_templates!(m::SpectralForwardModel, data)
+Loads in the stellar, tellurics, and gas cell templates (if any).
+"""
+function load_templates!(m::SpectralForwardModel, data)
     m.templates["λ"] = get_model_λ_grid(m, data)
     if !isnothing(m.star)
         m.templates["star"] = load_template(m.star, m.templates["λ"])

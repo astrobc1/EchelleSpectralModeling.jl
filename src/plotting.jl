@@ -113,7 +113,6 @@ end
 function plot_rvs(ensemble, rvs, iteration, output_path; time_offset=2450000)
 
     pygui(false)
-    plt.style.use((@__DIR__)[1:end-3] * "gadfly_stylesheet.mplstyle")
 
     # Plot the rvs, binned rvs, xcorr rvs, xcorr binned rvs
     figure(figsize=(8, 4), dpi=200)

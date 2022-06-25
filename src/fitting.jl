@@ -14,6 +14,10 @@ export compute_rvs
 
 const PATHSEP = Base.Filesystem.path_separator
 
+"""
+    compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, tag, n_iterations::Int, do_ccf::Bool, verbose::Bool=false)
+Primary method to iteratively compute the RVs for an IterativeSpectralRVEnsembleProblem object.
+"""
 function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, tag, n_iterations::Int, do_ccf::Bool, verbose::Bool=false)
 
     # Start the main clock!
@@ -42,7 +46,7 @@ function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, 
     p0scp = deepcopy(p0s)
 
     # Load templates
-    load_templates(ensemble)
+    load_templates!(ensemble)
 
     # Check which tellurics we need
     if !isnothing(ensemble.model.tellurics) && ensemble.model.tellurics isa TAPASTellurics
@@ -160,7 +164,7 @@ end
 #### OPTIMIZE HELPERS ####
 ##########################
 
-function optimize_all_observations(ensemble, p0s, iteration::Int, output_path::String; verbose::Bool)
+function optimize_all_observations(ensemble::IterativeSpectralRVEnsembleProblem, p0s, iteration::Int, output_path::String; verbose::Bool)
             
     # Timer
     ti = time()
@@ -239,7 +243,7 @@ end
 #### SAVE ####
 ##############
 
-function create_output_paths(ensemble, output_path)
+function create_output_paths(ensemble::IterativeSpectralRVEnsembleProblem, output_path)
     o_folder = label(ensemble.model.sregion) * PATHSEP
     mkpath(output_path)
     mkpath(output_path * o_folder)
@@ -248,23 +252,23 @@ function create_output_paths(ensemble, output_path)
     mkpath(output_path * o_folder * "Templates")
 end
 
-function save_ensemble(ensemble, output_path)
+function save_ensemble(ensemble::IterativeSpectralRVEnsembleProblem, output_path)
     fname = output_path * "$(label(ensemble.model.sregion))" * PATHSEP * "ensemble_$(label(ensemble.model.sregion)).jld"
     @save fname ensemble
 end
 
-function save_rvs(ensemble, rvs, output_path)
+function save_rvs(ensemble::IterativeSpectralRVEnsembleProblem, rvs, output_path)
     l = label(ensemble.model.sregion)
     fname = output_path * l * PATHSEP * "RVs" * PATHSEP * "rvs_$l.jld"
     @save fname rvs
 end
 
-function save_opt_results(ensemble, output_path, opt_results)
+function save_opt_results(ensemble::IterativeSpectralRVEnsembleProblem, output_path, opt_results)
     fname = output_path * label(ensemble.model.sregion) * PATHSEP * "Fits" * PATHSEP * "optimization_results_$(label(ensemble.model.sregion)).jld"
     @save fname opt_results
 end
 
-function save_stellar_templates(ensemble, output_path, stellar_templates)
+function save_stellar_templates(ensemble::IterativeSpectralRVEnsembleProblem, output_path, stellar_templates)
     fname = output_path * label(ensemble.model.sregion) * PATHSEP * "Templates" * PATHSEP * "stellar_templates_$(label(ensemble.model.sregion)).txt"
     λ = ensemble.model.templates["λ"]
     writedlm(fname, [λ stellar_templates], ',')

@@ -14,7 +14,7 @@ end
 
 SplineContinuum(;n_splines, bounds) = SplineContinuum(n_splines, bounds)
 
-function EchelleSpectralModeling.get_init_parameters(m::SplineContinuum, data, sregion)
+function EchelleSpectralModeling.get_init_parameters(m::SplineContinuum, data::SpecData1d, sregion::SpecRegion1d)
     pars = Parameters()
     Δ = m.bounds[2] - m.bounds[1]
     v0 = m.bounds[1] + Δ / 2
@@ -29,7 +29,7 @@ function get_λ_lagrange_points(m::SplineContinuum, sregion)
     return collect(range(sregion.λmin - Δλ / 100, sregion.λmax + Δλ / 100, length=m.n_splines + 1))
 end
 
-function EchelleSpectralModeling.build(m::SplineContinuum, pars::Parameters, sregion, λ_out)
+function EchelleSpectralModeling.build(m::SplineContinuum, pars::Parameters, sregion::SpecRegion1d, λ_out)
     λs = get_λ_lagrange_points(m, sregion)
     knots = [pars["c$i"].value for i=1:m.n_splines+1]
     return build(m, λs, knots, λ_out)

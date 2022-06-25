@@ -4,9 +4,7 @@ using Reexport
 
 include("barycenter.jl")
 
-include("ensemble.jl")
-
-include("spectralmodel.jl")
+function build end
 
 include("modelcomponent.jl")
 
@@ -23,16 +21,20 @@ include("tellurics/tellurics.jl")
 include("wavelength/wavelength.jl")
 @reexport using .Wavelength
 
-include("fitting.jl")
+include("spectralmodel.jl")
 
 include("plotting.jl")
 
 include("rvcalc.jl")
 
+include("objectives/objectives.jl")
+@reexport using .SpectralModelObjectiveFunctions
+
+include("ensemble.jl")
+
 include("augmenting/augmenters.jl")
 @reexport using .TemplateAugmenters
 
-include("objectives/objectives.jl")
-@reexport using .SpectralModelObjectiveFunctions
+include("fitting.jl")
 
 end

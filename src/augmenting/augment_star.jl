@@ -5,7 +5,11 @@ using Infiltrator
 
 export augment_star!
 
-function augment_star!(ensemble, opt_results)
+"""
+    augment_star!(ensemble::IterativeSpectralRVEnsembleProblem, opt_results)
+Augment the stellar template variable by computing the weighted median of the residuals in the barycentric frame. Weights are proportional to 1 / rms^2.
+"""
+function augment_star!(ensemble::IterativeSpectralRVEnsembleProblem, opt_results)
 
     # Unpack the current stellar template
     star_λ = ensemble.model.templates["λ"]
