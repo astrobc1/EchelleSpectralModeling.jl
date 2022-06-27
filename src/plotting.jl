@@ -6,6 +6,10 @@ using EchelleSpectralModeling
 
 export plot_spectrum_fit
 
+"""
+    plot_spectrum_fit(data, model, pars, iteration::Int, output_path::String)
+Plots the data and model.
+"""
 function plot_spectrum_fit(data, model, pars, iteration::Int, output_path::String)
 
     # Build the model

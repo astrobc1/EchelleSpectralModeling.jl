@@ -15,8 +15,11 @@ struct TAPASTellurics <: SpectralModelComponent
     airmass_depth_guess::Vector{Float64}
 end
 
-
-function TAPASTellurics(;input_file, min_feature_depth=0.02, vel_guess=[-100, 10, 100], water_depth_guess=[0.1, 1.1, 4], airmass_depth_guess=[0.8, 1.1, 3])
+"""
+    TAPASTellurics(;input_file::String, min_feature_depth=0.02, vel_guess=[-100, 10, 100], water_depth_guess=[0.1, 1.1, 4], airmass_depth_guess=[0.8, 1.1, 3])
+Construct a TAPASTellurics model component. The templates are stored within `input_file`. C02, N2O, O2, O3, and CH4 are combined into a single template and utilize the parameter `airmass_depth`. H2O is kept separate and utilizes `water_depth`. If there are no features less than `min_feature_depth`, the parameters for this chunk are fixed for the appropriate template.
+"""
+function TAPASTellurics(;input_file::String, min_feature_depth=0.02, vel_guess=[-100, 10, 100], water_depth_guess=[0.1, 1.1, 4], airmass_depth_guess=[0.8, 1.1, 3])
     return TAPASTellurics(input_file, min_feature_depth, vel_guess, water_depth_guess, airmass_depth_guess)
 end
 
@@ -87,6 +90,7 @@ function EchelleSpectralModeling.get_init_parameters(m::TAPASTellurics, data::Sp
     pars["vel_tel"] = Parameter(value=m.vel_guess[2], lower_bound=m.vel_guess[1], upper_bound=m.vel_guess[3])
     return pars
 end
+
 
 function get_mask(m::TAPASTellurics, pars::Parameters, templates, kernel=nothing, λ_out=nothing)
     tell_flux = build(m, pars, templates)

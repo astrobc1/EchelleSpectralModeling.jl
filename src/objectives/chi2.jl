@@ -5,9 +5,16 @@ using Infiltrator
 
 export Chi2
 
+"""
+    Container (empty) for a Chi2 objective.
+"""
 struct Chi2 <: SpectralModelObjectiveFunction
 end
 
+"""
+    compute_obj(obj::Chi2, pars::Parameters, data::SpecData1d, model::SpectralForwardModel)
+Computes the Reduced-χ2 objective. The worst 2% of pixels and 4 edge pixels on each side are masked.
+"""
 function compute_obj(obj::Chi2, pars::Parameters, data::SpecData1d, model::SpectralForwardModel)
     try
         _, model_flux = build(model, pars, data)

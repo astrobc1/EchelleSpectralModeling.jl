@@ -5,8 +5,14 @@ using Infiltrator
 using PyPlot
 using LsqFit
 
+export get_peaks
+
 SPEED_OF_LIGHT_MPS = 299792458.0
 
+"""
+    get_peak_spacing(λ, λi, λf, ν0, Δν; deg=1)
+Returns a polynomial that describes the peak spacing at a given pixel.
+"""
 function get_peak_spacing(λ, λi, λf, ν0, Δν; deg=1)
 
     # Get peaks
@@ -34,6 +40,18 @@ function get_peak_spacing(λ, λi, λf, ν0, Δν; deg=1)
     return pfit
 end
 
+"""
+    get_peaks(λ, flux, ν0, Δν; σ_guess=[0.2, 1.4, 3.0], μ_bounds=[-1, 1])
+Computes the spot centroids. Returns a tuple:
+- `centers_pixels::Vector{Float64}` The pixel centroids.
+- `centers_λ::Vector{Float64}` The corresponding wavelength centroids.
+- `integers::Vector{Int64}` The corresponding spot integers, relative to ν0.
+- `amplitudes::Vector{Float64}` The modeled amplitude of each spot.
+- `σs::Vector{Float64}` The modeled sigma of each spot.
+- `rms::Vector{Float64}` The RMS from the fit for each spot.
+- `offsets::Vector{Float64}` The modeled zero point (in flux, relative to 1) of each spot.
+- `slopes::Vector{Float64}` The modeled slope (in flux, relative to 1) of each spot.
+"""
 function get_peaks(λ, flux, ν0, Δν; σ_guess=[0.2, 1.4, 3.0], μ_bounds=[-1, 1])
 
     # Generate theoretical peaks

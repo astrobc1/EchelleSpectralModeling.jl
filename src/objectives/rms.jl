@@ -5,9 +5,16 @@ using Infiltrator
 
 export RMS
 
+"""
+Container (empty) for an RMS objective.
+"""
 struct RMS <: SpectralModelObjectiveFunction
 end
 
+"""
+    compute_obj(obj::RMS, pars::Parameters, data::SpecData1d, model::SpectralForwardModel)
+Computes the RMS objective. The worst 2% of pixels and 4 edge pixels on each side are masked.
+"""
 function compute_obj(obj::RMS, pars::Parameters, data::SpecData1d, model::SpectralForwardModel)
     try
         _, model_flux = build(model, pars, data)

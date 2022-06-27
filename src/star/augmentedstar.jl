@@ -4,14 +4,18 @@ using EchelleSpectralModeling
 
 export AugmentedStar
 
-struct AugmentedStar <: SpectralModelComponent
-    input_file::Union{String, Nothing}
+struct AugmentedStar{T<:Union{String, Nothing}} <: SpectralModelComponent
+    input_file::T
     vel_bounds::Vector{Float64}
     star_name::String
     absolute_rv_guess::Float64
 end
 
-function AugmentedStar(;input_file, vel_bounds=[-5000, 5000], star_name, absolute_rv_guess=0.0)
+"""
+    AugmentedStar(;input_file::String, vel_bounds=[-5000, 5000], star_name::String, absolute_rv_guess::Real=0.0)
+Construct an AugmentedStar model component. `input_file` must be comma delimited. Comments can start with #. The name of the star is used to determine the barycentric corrections with barycorrpy. If `input_file` is nothing, the model starts from a flat template.
+"""
+function AugmentedStar(;input_file::String, vel_bounds=[-5000, 5000], star_name::String, absolute_rv_guess::Real=0.0)
     return AugmentedStar(input_file, vel_bounds, star_name, absolute_rv_guess)
 end
 

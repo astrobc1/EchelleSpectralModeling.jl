@@ -8,12 +8,17 @@ using Infiltrator
 
 export SplineλSolution
 
+
 struct SplineλSolution <: SpectralModelComponent
     n_splines::Int
     bounds::Vector{Float64}
 end
 
-SplineλSolution(;n_splines, bounds) = SplineλSolution(n_splines, bounds)
+"""
+    SplineλSolution(;n_splines::Int, bounds::Vector{Float64})
+Construct a SplineλSolution model component with `n_splines` (# of knots = `n_splines + 1`). Each knot (in units of wavelength) is bounded by `bounds`.
+"""
+SplineλSolution(;n_splines::Int, bounds::Vector{Float64}) = SplineλSolution(n_splines, bounds)
 
 function get_pixel_lagrange_points(m::SplineλSolution, sregion)
     return Int.(round.(collect(range(sregion.pixmin+1, sregion.pixmax-1, length=m.n_splines + 1))))

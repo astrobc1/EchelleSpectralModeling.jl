@@ -32,9 +32,6 @@ include("objectives/objectives.jl")
 
 include("ensemble.jl")
 
-include("augmenting/augmenters.jl")
-@reexport using .TemplateAugmenters
-
 include("fitting.jl")
 
 end

@@ -25,6 +25,51 @@ function combine_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weights::Matri
     return rvs_single_out, unc_single_out, t_binned_out, rvs_binned_out, unc_binned_out
 end
 
+function combine_relative_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weights::Matrix{Float64}, indices)
+
+    # Numbers
+    n_chunks, n_spec = size(rvs)
+    n_bins = length(indices)
+
+    # Align chunks
+    rvli, wli = align_chunks(rvs, weights)
+    
+    # Output arrays
+    rvs_single_out = fill(NaN, n_spec)
+    unc_single_out = fill(NaN, n_spec)
+    t_binned_out = fill(NaN, n_bins)
+    rvs_binned_out = fill(NaN, n_bins)
+    unc_binned_out = fill(NaN, n_bins)
+    bad = findall(.~isfinite.(wli))
+    wli[bad] .= 0
+        
+    # Per-observation RVs
+    for i=1:n_spec
+        rvs_single_out[i] = maths.weighted_mean(rvli[:, i], wli[:, i])
+        n_good = length(findall(wli[:, i] .> 0))
+        if n_good > 0
+            unc_single_out[i] = maths.weighted_stddev(rvli[:, i], wli[:, i]) / sqrt(n_good)
+        end
+    end
+        
+    # Per-night RVs
+    for i=1:n_bins
+        f, l = indices[i]
+        rr = rvli[:, f:l][:]
+        ww = wli[:, f:l][:]
+        bad = findall(.~isfinite.(rr))
+        ww[bad] .= 0
+        good = findall(ww .> 0)
+        rvs_binned_out[i] = maths.weighted_mean(rr, ww)
+        if length(good) > 0
+            unc_binned_out[i] = maths.weighted_stddev(rr, ww) / sqrt(length(good))
+        end
+        t_binned_out[i] = mean(bjds[f:l])
+    end
+    
+    return rvs_single_out, unc_single_out, t_binned_out, rvs_binned_out, unc_binned_out
+end
+
 function bin_rvs_single_order(rvs::Vector{Float64}, weights::Vector{Float64}, indices::Vector{Float64})
 
     # The number of spectra and nights

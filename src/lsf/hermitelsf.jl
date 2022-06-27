@@ -10,7 +10,11 @@ struct HermiteLSF <: SpectralModelComponent
     coeff_guess::Vector{Float64}
 end
 
-HermiteLSF(;deg, σ_guess, coeff_guess) = HermiteLSF(deg, σ_guess, coeff_guess)
+"""
+    HermiteLSF(;deg::Int, σ_guess::Vector{Float64}, coeff_guess::Vector{Float64})
+Construct a HermiteLSF model component of degree `n`, width `σ`, and coeffs. `n=0` corresponds to a pure Gaussian.
+"""
+HermiteLSF(;deg::Int, σ_guess::Vector{Float64}, coeff_guess::Vector{Float64}) = HermiteLSF(deg, σ_guess, coeff_guess)
 
 function get_kernel_λ(m::HermiteLSF, δλ)
     Δλ = 10 * m.σ_guess[3]

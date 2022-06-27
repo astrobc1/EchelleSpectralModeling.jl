@@ -1,5 +1,7 @@
 export compute_rv_content
 
+using Infiltrator
+
 """
     compute_rv_content(model::SpectralForwardModel, pars::Parameters, data::SpecData1d; snr=1)
 Computes the stellar rv content at each pixel and co-added across all pixels, accounting for the gas cell flux and corresponding calibration errors, as well as the telluric flux.
@@ -56,7 +58,7 @@ function compute_rv_content(model::SpectralForwardModel, pars::Parameters, data:
     good = findall(isfinite.(data_λ) .&& isfinite.(star_flux))
 
     # Create a spline for the stellar flux to compute derivatives
-    cspline_star = maths.CubicSpline(star_flux[good], data_λ[good])
+    cspline_star = maths.CubicSpline(data_λ[good], star_flux[good])
 
     # Stores rv content for star
     rvc_per_pix_star = fill(NaN, length(data_λ))
@@ -67,7 +69,7 @@ function compute_rv_content(model::SpectralForwardModel, pars::Parameters, data:
         # Find good pixels
         good = findall(isfinite.(data_λ) .&& isfinite.(gas_flux))
 
-        cspline_gas = maths.CubicSpline(gas_flux[good], data_λ[good])
+        cspline_gas = maths.CubicSpline(data_λ[good], gas_flux[good])
 
         # Stores rv content for gas cell
         rvc_per_pix_gas = fill(NaN, length(data_λ))
@@ -96,7 +98,7 @@ function compute_rv_content(model::SpectralForwardModel, pars::Parameters, data:
         Ai = Ai * snr^2
 
         # Compute derivative of stellar flux and gas flux
-        dAi_dw_star = derivative(cspline_star, data_λ[i])
+        dAi_dw_star = maths.derivative(cspline_star, data_λ[i])
         if !isnothing(gas_flux)
             dAi_dw_star *= gas_flux[i]
         end
@@ -117,7 +119,7 @@ function compute_rv_content(model::SpectralForwardModel, pars::Parameters, data:
 
         # Compute derivative of gas cell flux
         if !isnothing(gas_flux)
-            dAi_dw_gas = derivative(cspline_gas, data_λ[i])
+            dAi_dw_gas = maths.derivative(cspline_gas, data_λ[i])
             dAi_dw_gas *= star_flux[i]
             
             if !isnothing(tell_flux)

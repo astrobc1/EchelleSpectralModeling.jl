@@ -15,7 +15,11 @@ struct PolyλSolution <: SpectralModelComponent
     bounds::Vector{Float64}
 end
 
-PolyλSolution(;deg, bounds) = PolyλSolution(deg, bounds)
+"""
+    PolyλSolution(;deg::Int, bounds::Vector{Float64})
+Construct a PolyλSolution model component of degree `deg`. The optimized parameters are set points opposed to coefficients. Each set point is(in units of wavelength) is bounded by `bounds`.
+"""
+PolyλSolution(;deg::Int, bounds::Vector{Float64}) = PolyλSolution(deg, bounds)
 
 function get_pixel_lagrange_points(m::PolyλSolution, sregion)
     return Int.(round.(collect(range(sregion.pixmin+1, sregion.pixmax-1, length=m.deg + 1))))
