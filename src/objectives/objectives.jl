@@ -12,7 +12,10 @@ function compute_obj end
 
 (obj::SpectralModelObjectiveFunction)(pars, data, model) = compute_obj(obj, pars, data, model)
 
-include("rms.jl")
+# Chi 2 obj
 include("chi2.jl")
+
+# RMS
+include("rms.jl")
 
 end

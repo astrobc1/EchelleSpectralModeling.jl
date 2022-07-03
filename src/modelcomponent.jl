@@ -1,7 +1,6 @@
-using DelimitedFiles
 using CurveFitParameters
 
-export SpectralModelComponent, load_template, build, get_init_parameters
+export SpectralModelComponent
 
 """
     SpectralModelComponent

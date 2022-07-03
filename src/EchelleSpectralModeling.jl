@@ -2,36 +2,50 @@ module EchelleSpectralModeling
 
 using Reexport
 
+# Barycenter corrections
 include("barycenter.jl")
 
-function build end
+# Modeling API
+include("spectralmodeling.jl")
 
+# Model components
 include("modelcomponent.jl")
 
-include("continuum/continuum.jl")
+# Implementations of components
+include("continuum/Continuum.jl")
 @reexport using .Continuum
-include("gascell/gascells.jl")
+include("gascell/GasCells.jl")
 @reexport using .GasCells
-include("lsf/lsf.jl")
+include("lsf/LSF.jl")
 @reexport using .LSF
-include("star/star.jl")
+include("star/Star.jl")
 @reexport using .Star
-include("tellurics/tellurics.jl")
+include("tellurics/Tellurics.jl")
 @reexport using .Tellurics
-include("wavelength/wavelength.jl")
+include("wavelength/Wavelength.jl")
 @reexport using .Wavelength
 
+# Primary model container
 include("spectralmodel.jl")
 
+# Plotting
 include("plotting.jl")
 
+# RV specific methods
 include("rvcalc/rvcalc.jl")
 
-include("objectives/objectives.jl")
+# Objectives for optimizing
+include("objectives/Objectives.jl")
 @reexport using .SpectralModelObjectiveFunctions
 
+# Template Augmenting
+include("augmenting/TemplateAugmenting.jl")
+@reexport using .TemplateAugmenting
+
+# Primary container to hold data, model, objective, augmenter
 include("ensemble.jl")
 
+# Fitting api
 include("fitting.jl")
 
 end

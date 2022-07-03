@@ -18,7 +18,7 @@ const PATHSEP = Base.Filesystem.path_separator
     compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, tag, n_iterations::Int, do_ccf::Bool, verbose::Bool=false)
 Primary method to iteratively compute the RVs for an IterativeSpectralRVEnsembleProblem object.
 """
-function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, tag, n_iterations::Int, do_ccf::Bool, verbose::Bool=false)
+function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, tag, n_iterations::Int, do_ccf::Bool, initial_star_from_data::Bool=false, continuum_poly_deg_estimate=nothing, verbose::Bool=true)
 
     # Start the main clock!
     time_start_main = time()
@@ -27,7 +27,7 @@ function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, 
     output_path = output_path * get_spectrograph(ensemble) * "_" * tag * PATHSEP
 
     # Create output paths
-    create_output_paths(ensemble, output_path)
+    create_output_dirs(ensemble, output_path)
 
     # Init the rvs dictionary
     rvs = Dict{String, Any}()
@@ -42,59 +42,38 @@ function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, 
     if do_ccf
         rvs["rvsxc"] = fill(NaN, (length(ensemble), n_iterations))
         rvs["rvsxcerr"] = fill(NaN, (length(ensemble), n_iterations))
+        rvs["bis"] = fill(NaN, (length(ensemble), n_iterations))
     end
 
     # Opt results (vector of vector of named tuples)
     opt_results = Vector{NamedTuple}[]
 
-    # Get initial parameters
-    p0s = get_init_parameters(ensemble)
-    p0scp = deepcopy(p0s)
-
     # Load templates
     load_templates!(ensemble)
 
-    # Check which tellurics we need
-    if !isnothing(ensemble.model.tellurics) && ensemble.model.tellurics isa TAPASTellurics
-        if !isnothing(ensemble.model.lsf)
-            kernel = build(ensemble.model.lsf, p0s[1], ensemble.model.templates)
-            use_water = has_water_features(ensemble.model.tellurics, ensemble.model.templates, kernel)
-            use_airmass = has_airmass_features(ensemble.model.tellurics, ensemble.model.templates, kernel)
-        else
-            use_water = has_water_features(ensemble.model.tellurics, ensemble.model.templates)
-            use_airmass = has_airmass_features(ensemble.model.tellurics, ensemble.model.templates)
-        end
-        if ~use_water
-            for p0 ∈ p0s
-                p0["water_depth"] = Parameter(value=1, lower_bound=1, upper_bound=1)
-            end
-        end
-        if ~use_airmass
-            for p0 ∈ p0s
-                p0["airmass_depth"] = Parameter(value=1, lower_bound=1, upper_bound=1)
-            end
-        end
-        if ~use_water && ~use_airmass
-            for p0 ∈ p0s
-                p0["vel_tel"] = Parameter(value=0, lower_bound=0, upper_bound=0)
-            end
-        end
-    end
+    # Get initial parameters
+    p0s = get_init_parameters(ensemble)
+    p0scp = deepcopy(p0s)
 
     # Stellar templates
     stellar_templates = zeros(length(ensemble.model.templates["λ"]), n_iterations + 1)
     stellar_templates[:, 1] .= ensemble.model.templates["λ"]
     stellar_templates[:, 2] .= ensemble.model.templates["star"]
 
-    # Iterate over remaining stellar template generations
+    # If no stellar template provided, get estimate from data
+    if isnothing(ensemble.model.star.input_file) && initial_star_from_data
+        ensemble.model.templates["star"] = estimate_initial_stellar_template(ensemble.model, ensemble.data, p0s, continuum_poly_deg=continuum_poly_deg_estimate)
+    end
+
+    # Loop over iterations
     for iteration=1:n_iterations
 
         # Timer
         time_iter_start = time()
         println("Starting iteration $iteration [$(label(ensemble.model.sregion))]")
-        
+
         # Flat stellar template
-        if iteration == 1 && isnothing(ensemble.model.star.input_file)
+        if iteration == 1 && isnothing(ensemble.model.star.input_file) && ~initial_star_from_data
 
             # Fix stellar rv
             for p0 ∈ p0s
@@ -102,12 +81,12 @@ function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, 
             end
             
             # Fit all observations
-            _opt_results = optimize_all_observations(ensemble, p0s, iteration, output_path; verbose=verbose)
+            _opt_results = optimize_spectra(ensemble, p0s, iteration, output_path; verbose=verbose)
             push!(opt_results, _opt_results)
             
             # Augment the template
             if iteration < n_iterations
-                augment_star!(ensemble, _opt_results)
+                augment_star!(ensemble.model, ensemble.data, _opt_results, ensemble.augmenter)
             end
         
         else
@@ -117,15 +96,15 @@ function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, 
                 p0s = [res.pbest for res ∈ opt_results[end]]
             end
 
-            # Fix stellar rv
-            if iteration == 2 && isnothing(ensemble.model.star.input_file)
+            # Vary stellar rv
+            if iteration == 2 && isnothing(ensemble.model.star.input_file) && ~initial_star_from_data
                 for i=1:length(p0s)
                     p0s[i]["vel_star"] = p0scp[i]["vel_star"]
                 end
             end
 
             # Run the fit for all spectra and do a cross correlation analysis as well.
-            _opt_results = optimize_all_observations(ensemble, p0s, iteration, output_path; verbose=verbose)
+            _opt_results = optimize_spectra(ensemble, p0s, iteration, output_path; verbose=verbose)
             push!(opt_results, _opt_results)
 
             # Cross correlation
@@ -140,27 +119,27 @@ function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, 
             rvs["rvsfwm"][:, iteration] .= [res.pbest["vel_star"].value + d.header["bc_vel"] for (d, res) ∈ zip(ensemble.data, _opt_results)]
             save_rvs(ensemble, rvs, output_path)
             plot_rvs(ensemble, rvs, iteration, output_path)
-        
-            # Save forward model outputs each time
-            save_ensemble(ensemble, output_path)
-            save_opt_results(ensemble, output_path, opt_results)
-            save_rvs(ensemble, rvs, output_path)
-            save_stellar_templates(ensemble, output_path, stellar_templates)
 
             # Print RV Diagnostics
             if length(ensemble) > 1
                 rvσ = nanstd(rvs["rvsfwm"][:, iteration])
                 println("  Stddev of all fwm RVs = $(round(rvσ, digits=4)) m/s")
             end
-
-            # Augment the templates
-            if iteration < n_iterations
-                augment_star!(ensemble, _opt_results)
-                stellar_templates[:, iteration] .= ensemble.model.templates["star"]
-            end
-
-            println("Finished iteration $iteration, [$(label(ensemble.model.sregion))] in $(round((time() - time_iter_start) / 3600, digits=3)) hours")
         end
+
+        # Save forward model outputs each time
+        save_ensemble(ensemble, output_path)
+        save_opt_results(ensemble, output_path, opt_results)
+        save_stellar_templates(ensemble, output_path, stellar_templates)
+
+        # Augment the stellar template
+        if iteration < n_iterations
+            augment_star!(ensemble.model, ensemble.data, _opt_results, ensemble.augmenter)
+            stellar_templates[:, iteration] .= ensemble.model.templates["star"]
+        end
+
+        println("Finished iteration $iteration, [$(label(ensemble.model.sregion))] in $(round((time() - time_iter_start) / 3600, digits=3)) hours")
+
     end
 
     # Save forward model outputs
@@ -178,16 +157,16 @@ end
 #### OPTIMIZE HELPERS ####
 ##########################
 
-function optimize_all_observations(ensemble::IterativeSpectralRVEnsembleProblem, p0s, iteration::Int, output_path::String; verbose::Bool)
+function optimize_spectra(ensemble::IterativeSpectralRVEnsembleProblem, p0s, iteration::Int, output_path::String; verbose::Bool)
 
     # Opt results (vector of named tuples)
     if nprocs() > 1
         opt_results = pmap(1:length(ensemble.data)) do i
-            optimize_and_plot_observation(p0s[i], ensemble.data[i], ensemble.model, ensemble.obj, iteration, output_path)
+            optimize_and_plot_spectrum(p0s[i], ensemble.data[i], ensemble.model, ensemble.obj, iteration, output_path)
         end
     else
         opt_results = map(1:length(ensemble.data)) do i
-            optimize_and_plot_observation(p0s[i], ensemble.data[i], ensemble.model, ensemble.obj, iteration, output_path)
+            optimize_and_plot_spectrum(p0s[i], ensemble.data[i], ensemble.model, ensemble.obj, iteration, output_path)
         end
     end
 
@@ -197,8 +176,8 @@ function optimize_all_observations(ensemble::IterativeSpectralRVEnsembleProblem,
 end
 
 
-function optimize_and_plot_observation(p0, data, model, obj, iteration, output_path)
-    opt_result = optimize_observation(p0, data, model, obj, iteration)
+function optimize_and_plot_spectrum(p0, data, model, obj, iteration, output_path)
+    opt_result = optimize_spectrum(p0, data, model, obj, iteration)
     try
         plot_spectrum_fit(data, model, opt_result.pbest, iteration, output_path)
     catch
@@ -208,7 +187,7 @@ function optimize_and_plot_observation(p0, data, model, obj, iteration, output_p
 end
 
 
-function optimize_observation(p0, data, model, obj, iteration; verbose=true)
+function optimize_spectrum(p0, data, model, obj, iteration; verbose=true)
 
     # Time the fit
     ti = time()
@@ -236,10 +215,10 @@ function optimize_observation(p0, data, model, obj, iteration; verbose=true)
     # Print results
     println("Fit observation $(data), Iteration $iteration, $(label(model.sregion)) in $(round((time() - ti) / 60, digits=3)) min")
     if verbose
-        println(" Objective = $(round(opt_result.fbest, digits=3))")
-        println(" Calls: $(opt_result.fcalls)")
-        println(" Parameters:")
-        println(" $(opt_result.pbest)")
+        println("Objective = $(round(opt_result.fbest, digits=3))")
+        println("Calls: $(opt_result.fcalls)")
+        println("Parameters:")
+        println("$(opt_result.pbest)")
     end
 
     # Return
@@ -272,7 +251,7 @@ end
 #### SAVE ####
 ##############
 
-function create_output_paths(ensemble::IterativeSpectralRVEnsembleProblem, output_path)
+function create_output_dirs(ensemble::IterativeSpectralRVEnsembleProblem, output_path)
     o_folder = label(ensemble.model.sregion) * PATHSEP
     mkpath(output_path)
     mkpath(output_path * o_folder)

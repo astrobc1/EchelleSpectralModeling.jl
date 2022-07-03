@@ -16,10 +16,11 @@ abstract type SpectralRVEnsembleProblem{S} end
 - `model::AbstractSpectralForwardModel` The spectral forward model to use.
 - `obj::SpectralModelObjectiveFunction` The objective function to use.
 """
-struct IterativeSpectralRVEnsembleProblem{S, M<:AbstractSpectralForwardModel, O<:SpectralModelObjectiveFunction} <: SpectralRVEnsembleProblem{S}
+struct IterativeSpectralRVEnsembleProblem{S, M<:AbstractSpectralForwardModel, O<:SpectralModelObjectiveFunction, T<:TemplateAugmenter} <: SpectralRVEnsembleProblem{S}
     data::Vector{SpecData1d{S}}
     model::M
     obj::O
+    augmenter::T
 end
 
 """
@@ -38,7 +39,7 @@ SpectralData.get_spectrograph(ensemble::IterativeSpectralRVEnsembleProblem) = St
     IterativeSpectralRVEnsembleProblem(;spectrograph::String, data_input_path::String, filelist::String, model, obj)
 Construct an IterativeSpectralRVEnsembleProblem object.
 """
-function IterativeSpectralRVEnsembleProblem(;spectrograph::String, data_input_path::String, filelist::String, model, obj)
+function IterativeSpectralRVEnsembleProblem(;spectrograph::String, data_input_path::String, filelist::String, model, obj, augmenter)
     if string(data_input_path[end]) != Base.Filesystem.path_separator
         data_input_path *= Base.Filesystem.path_separator
     end
@@ -46,7 +47,7 @@ function IterativeSpectralRVEnsembleProblem(;spectrograph::String, data_input_pa
     jds = [parse_exposure_start_time(d) for d ∈ data]
     ss = sortperm(jds)
     data .= data[ss]
-    return IterativeSpectralRVEnsembleProblem(data, model, obj)
+    return IterativeSpectralRVEnsembleProblem(data, model, obj, augmenter)
 end
 
 """
@@ -54,7 +55,39 @@ end
 Gets the initial parameters for all observations.
 """
 function get_init_parameters(ensemble::IterativeSpectralRVEnsembleProblem)
-    return [get_init_parameters(ensemble.model, d) for d ∈ ensemble.data]
+
+    # Initial params
+    p0s = [get_init_parameters(ensemble.model, d) for d ∈ ensemble.data]
+
+    # Check which tellurics we need
+    if !isnothing(ensemble.model.tellurics) && ensemble.model.tellurics isa TAPASTellurics
+        if !isnothing(ensemble.model.lsf)
+            kernel = build(ensemble.model.lsf, p0s[1], ensemble.model.templates)
+            use_water = has_water_features(ensemble.model.tellurics, ensemble.model.templates, kernel)
+            use_airmass = has_airmass_features(ensemble.model.tellurics, ensemble.model.templates, kernel)
+        else
+            use_water = has_water_features(ensemble.model.tellurics, ensemble.model.templates)
+            use_airmass = has_airmass_features(ensemble.model.tellurics, ensemble.model.templates)
+        end
+        if ~use_water
+            for p0 ∈ p0s
+                p0["τ_water"] = Parameter(value=1, lower_bound=1, upper_bound=1)
+            end
+        end
+        if ~use_airmass
+            for p0 ∈ p0s
+                p0["τ_airmass"] = Parameter(value=1, lower_bound=1, upper_bound=1)
+            end
+        end
+        if ~use_water && ~use_airmass
+            for p0 ∈ p0s
+                p0["vel_tel"] = Parameter(value=0, lower_bound=0, upper_bound=0)
+            end
+        end
+    end
+
+    # Return
+    return p0s
 end
 
 """

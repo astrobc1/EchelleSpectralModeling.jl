@@ -2,7 +2,7 @@ using EchelleBase
 using CurveFitParameters
 using EchelleSpectralModeling
 
-export HermiteLSF, get_kernel_λ
+export HermiteLSF, get_lsfkernel_λ_grid
 
 struct HermiteLSF <: SpectralModelComponent
     deg::Int
@@ -16,26 +16,26 @@ Construct a HermiteLSF model component of degree `n`, width `σ`, and coeffs. `n
 """
 HermiteLSF(;deg::Int, σ_guess::Vector{Float64}, coeff_guess::Vector{Float64}) = HermiteLSF(deg, σ_guess, coeff_guess)
 
-function get_kernel_λ(m::HermiteLSF, δλ)
+function get_lsfkernel_λ_grid(m::HermiteLSF, δλ::Real)
     Δλ = 10 * m.σ_guess[3]
     n = Int(ceil(Δλ / δλ))
     if iseven(n)
         n += 1
     end
-    λrel = [Int(ceil(-n / 2)):Int(floor(n / 2));] .* δλ
-    return λrel
+    λlsf = [Int(ceil(-n / 2)):Int(floor(n / 2));] .* δλ
+    return λlsf
 end
 
-function EchelleSpectralModeling.build(m::HermiteLSF, pars::Parameters, templates)
+function EchelleSpectralModeling.build(m::HermiteLSF, pars::Parameters, templates::Dict)
     coeffs = [pars["a$k"].value for k=0:m.deg]
-    λrel = templates["λrel"]
-    return build(m, coeffs, λrel)
+    λlsf = templates["λlsf"]
+    return build(m, coeffs, λlsf)
 end
 
-function EchelleSpectralModeling.build(m::HermiteLSF, coeffs::Vector, λrel)
+function EchelleSpectralModeling.build(m::HermiteLSF, coeffs::Vector, λlsf::AbstractVector)
     σ = coeffs[1]
-    herm = maths.hermfun(λrel ./ σ, m.deg)
-    kernel = @view herm[:, 1]
+    herm = maths.hermfun(λlsf ./ σ, m.deg)
+    kernel = herm[:, 1]
     if m.deg == 0  # just a Gaussian
         return kernel ./ sum(kernel)
     end
@@ -46,7 +46,7 @@ function EchelleSpectralModeling.build(m::HermiteLSF, coeffs::Vector, λrel)
     return kernel
 end
 
-function EchelleSpectralModeling.get_init_parameters(m::HermiteLSF, data, sregion)
+function EchelleSpectralModeling.get_init_parameters(m::HermiteLSF, data::SpecData1d, sregion::SpecRegion1d)
     pars = Parameters()
     pars["a0"] = Parameter(value=m.σ_guess[2], lower_bound=m.σ_guess[1], upper_bound=m.σ_guess[3])
     for i=1:m.deg

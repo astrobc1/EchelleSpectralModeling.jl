@@ -10,6 +10,9 @@ Abstract type for a spectral forward model.
 """
 abstract type AbstractSpectralForwardModel end
 
+# Optional Model Component
+const OptionalSpectralModelComponent = Union{SpectralModelComponent, Nothing}
+
 """
     SpectralForwardModel{S<:SpectralModelComponent, T<:SpectralModelComponent, G<:SpectralModelComponent, W<:SpectralModelComponent, P<:SpectralModelComponent, C<:SpectralModelComponent}
 # Primary container for a spectral forward model which models the star, tellurics, the continuum, the wavelength solution, a gas cell (optional), and the line spread function. The wavelength solution may be static using APrioriλSolution.
@@ -24,7 +27,7 @@ abstract type AbstractSpectralForwardModel end
 - `oversample::Int` The oversampleing factor of the model.
 - `templates::Dict{String, Array{Float64}}` Contains any templates.
 """
-struct SpectralForwardModel{S<:SpectralModelComponent, T<:Union{SpectralModelComponent, Nothing}, G<:Union{SpectralModelComponent, Nothing}, W<:SpectralModelComponent, P<:Union{SpectralModelComponent, Nothing}, C<:Union{SpectralModelComponent, Nothing}} <: AbstractSpectralForwardModel
+struct SpectralForwardModel{S<:OptionalSpectralModelComponent, T<:OptionalSpectralModelComponent, G<:OptionalSpectralModelComponent, W<:OptionalSpectralModelComponent, P<:OptionalSpectralModelComponent, C<:OptionalSpectralModelComponent} <: AbstractSpectralForwardModel
     star::S
     tellurics::T
     gascell::G
@@ -45,7 +48,7 @@ function SpectralForwardModel(;star=nothing, tellurics=nothing, gascell=nothing,
     return SpectralForwardModel(star, tellurics, gascell, λsolution, lsf, continuum, sregion, oversample, Dict{String, Array{Float64}}())
 end
 
-function get_model_λ_spacing(m::SpectralForwardModel, data)
+function get_model_grid_δλ(m::SpectralForwardModel, data::Vector{SpecData1d{S}}) where{S}
     if isnothing(m.sregion.pixmin)
         Δx = length(data[1].data.flux)
     else
@@ -56,8 +59,8 @@ function get_model_λ_spacing(m::SpectralForwardModel, data)
     return δλ
 end
 
-function get_model_λ_grid(m::SpectralForwardModel, data; pad=2)
-    δλ = get_model_λ_spacing(m, data)
+function get_model_λ_grid(m::SpectralForwardModel, data::Vector{SpecData1d{S}}; pad::Real=2)  where{S}
+    δλ = get_model_grid_δλ(m, data)
     λ = [m.sregion.λmin-pad:δλ:m.sregion.λmax+pad;]
     return λ
 end
@@ -66,7 +69,7 @@ end
     build(m::SpectralForwardModel, pars::Parameters, data; interp=true)
 Builds the model for a given set of parameters and given observation.
 """
-function build(m::SpectralForwardModel, pars::Parameters, data; interp=true)
+function build(m::SpectralForwardModel, pars::Parameters, data::SpecData1d; interp=true)
         
     # Get model wave grid
     λhr = m.templates["λ"]
@@ -123,7 +126,7 @@ end
     get_init_parameters(m::SpectralForwardModel, data)
 Gets the initial parameters for a given observation.
 """
-function get_init_parameters(m::SpectralForwardModel, data)
+function get_init_parameters(m::SpectralForwardModel, data::SpecData1d)
     pars = Parameters()
     if !isnothing(m.star)
         merge!(pars, get_init_parameters(m.star, data, m.sregion))
@@ -146,21 +149,11 @@ function get_init_parameters(m::SpectralForwardModel, data)
     return pars
 end
 
-function get_varied_parameters(pars)
-    vp = Parameters()
-    for par ∈ values(pars)
-        if par.lower_bound == par.upper_bound
-            vp[par.name] = par
-        end
-    end
-    return vp
-end
-
 """
     load_templates!(m::SpectralForwardModel, data)
 Loads in the stellar, tellurics, and gas cell templates (if any).
 """
-function load_templates!(m::SpectralForwardModel, data)
+function load_templates!(m::SpectralForwardModel, data::Vector{SpecData1d{S}}) where {S}
     m.templates["λ"] = get_model_λ_grid(m, data)
     if !isnothing(m.star)
         m.templates["star"] = load_template(m.star, m.templates["λ"])
@@ -173,6 +166,6 @@ function load_templates!(m::SpectralForwardModel, data)
     end
     if !isnothing(m.lsf)
         δλ = m.templates["λ"][3] - m.templates["λ"][2]
-        m.templates["λrel"] = get_kernel_λ(m.lsf, δλ)
+        m.templates["λlsf"] = get_lsfkernel_λ_grid(m.lsf, δλ)
     end
 end

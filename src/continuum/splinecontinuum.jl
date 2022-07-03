@@ -1,5 +1,3 @@
-using NaNStatistics
-using Polynomials
 using CurveFitParameters
 
 using EchelleBase

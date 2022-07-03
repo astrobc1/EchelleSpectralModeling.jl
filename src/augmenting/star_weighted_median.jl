@@ -1,27 +1,28 @@
 using EchelleBase
-using EchelleSpectralModeling
-using NaNStatistics
-using Infiltrator
 
-export augment_star!
+export WeightedMedianAugmenter
+
+struct WeightedMedianAugmenter <: TemplateAugmenter
+end
 
 """
-    augment_star!(ensemble, opt_results)
+    augment_star!(model::SpectralForwardModel, data::Vector{SpecData1d{S}}, opt_results::Vector, augmenter::WeightedMedianAugmenter) where {S}
 Augment the stellar template variable by computing the weighted median of the residuals in the barycentric frame. Weights are proportional to 1 / rms^2.
 """
-function augment_star!(ensemble, opt_results::Vector)
+function augment_star!(model::SpectralForwardModel, data::Vector{SpecData1d{S}}, opt_results::Vector, augmenter::WeightedMedianAugmenter) where {S}
 
     # Unpack the current stellar template
-    star_λ = ensemble.model.templates["λ"]
-    star_flux = copy(ensemble.model.templates["star"])
+    star_λ = model.templates["λ"]
+    star_flux = copy(model.templates["star"])
     
     # Storage arrays
     nx = length(star_λ)
-    residuals = zeros(nx, length(ensemble))
-    weights = zeros(nx, length(ensemble))
+    n_data = length(data)
+    residuals = zeros(nx, n_data)
+    weights = zeros(nx, n_data)
 
     # Loop over spectra
-    for i=1:length(ensemble)
+    for i=1:n_data
 
         if !isfinite(opt_results[i].fbest)
             continue
@@ -33,25 +34,25 @@ function augment_star!(ensemble, opt_results::Vector)
             pars = opt_results[i].pbest
         
             # Generate the low res model
-            data_λ, model_lr = build(ensemble.model, pars, ensemble.data[i])
+            data_λ, model_lr = build(model, pars, data[i])
             
             # Residuals
-            residuals_lr = ensemble.data[i].data.flux .- model_lr
+            residuals_lr = data[i].data.flux .- model_lr
 
             # Shift to a coherent frame
-            if isnothing(ensemble.model.star.input_file)
-                vel = ensemble.data[i].header["bc_vel"]
+            if isnothing(model.star.input_file)
+                vel = data[i].header["bc_vel"]
             else
                 vel = -1 * pars["vel_star"].value
             end
             λ_star_rest = maths.doppler_shift_λ(data_λ , vel)
             residuals[:, i] .= maths.cspline_interp(λ_star_rest, residuals_lr, star_λ)
-            good = findall(isfinite.(residuals_lr) .&& (ensemble.data[i].data.mask .> 0))
+            good = findall(isfinite.(residuals_lr) .&& (data[i].data.mask .> 0))
             if length(good) == 0
                 continue
             end
             rms = (nansum(residuals_lr[good].^2) / length(good))^.5
-            weights_lr = ensemble.data[i].data.mask ./ rms^2
+            weights_lr = data[i].data.mask ./ rms^2
             bad = findall(.~isfinite.(weights_lr))
             weights_lr[bad] .= 0
             
@@ -102,6 +103,6 @@ function augment_star!(ensemble, opt_results::Vector)
     new_flux[bad] .= 1
 
     # Update the template
-    ensemble.model.templates["star"] .= new_flux
+    model.templates["star"] .= new_flux
 
 end
