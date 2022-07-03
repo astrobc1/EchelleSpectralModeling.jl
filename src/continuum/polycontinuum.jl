@@ -15,7 +15,7 @@ end
     PolyContinuum(;deg::Int, coeffs_guess::Vector{Float64})
 Construct a PolyContinuum model component of degree `deg`.
 """
-PolyContinuum(;deg::Int, coeffs_guess::Vector{Float64}) = PolyContinuum(deg, coeffs_guess)
+PolyContinuum(;deg::Int, coeffs_guess::Dict{Int, Vector{Float64}}) = PolyContinuum(deg, coeffs_guess)
 
 function EchelleSpectralModeling.get_init_parameters(m::PolyContinuum, data::SpecData1d, sregion::SpecRegion1d)
     pars = Parameters()
