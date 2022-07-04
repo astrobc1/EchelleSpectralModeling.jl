@@ -40,7 +40,7 @@ SpectralData.get_spectrograph(ensemble::IterativeSpectralRVEnsembleProblem) = St
     IterativeSpectralRVEnsembleProblem(;spectrograph::String, filenames::AbstractVector{String}, model::AbstractSpectralForwardModel, obj::SpectralModelObjectiveFunction, augmenter::TemplateAugmenter)
 Construct an IterativeSpectralRVEnsembleProblem object.
 """
-function IterativeSpectralRVEnsembleProblem(spectrograph::String, data_input_path::String, filelist::String, model::AbstractSpectralForwardModel, obj::SpectralModelObjectiveFunction, augmenter::TemplateAugmenter)
+function IterativeSpectralRVEnsembleProblem(data_input_path::String, filelist::String, model::AbstractSpectralForwardModel, obj::SpectralModelObjectiveFunction, augmenter::TemplateAugmenter; spectrograph::String)
     if string(data_input_path[end]) != Base.Filesystem.path_separator
         data_input_path *= Base.Filesystem.path_separator
     end
@@ -51,7 +51,7 @@ function IterativeSpectralRVEnsembleProblem(spectrograph::String, data_input_pat
     return IterativeSpectralRVEnsembleProblem(data, model, obj, augmenter)
 end
 
-function IterativeSpectralRVEnsembleProblem(spectrograph::String, filenames::AbstractVector{String}, model::AbstractSpectralForwardModel, obj::SpectralModelObjectiveFunction, augmenter::TemplateAugmenter)
+function IterativeSpectralRVEnsembleProblem(filenames::AbstractVector{String}, model::AbstractSpectralForwardModel, obj::SpectralModelObjectiveFunction, augmenter::TemplateAugmenter; spectrograph::String)
     data = [SpecData1d(fname, spectrograph, model.sregion) for fname ∈ filenames]
     jds = [parse_exposure_start_time(d) for d ∈ data]
     ss = sortperm(jds)
