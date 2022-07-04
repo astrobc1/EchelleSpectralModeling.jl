@@ -4,6 +4,8 @@ using EchelleBase
 using EchelleSpectralModeling
 using CurveFitParameters
 
+using Infiltrator
+
 """
     AbstractSpectralForwardModel
 Abstract type for a spectral forward model.
@@ -93,6 +95,11 @@ function build(m::SpectralForwardModel, pars::Parameters, data::SpecData1d; inte
     end
         
     # Convolve
+    begin
+        lags = [-500:0.1734:500;]
+        ccf = maths.cross_correlate_doppler(λhr, maths.convolve1d(model_flux, kernel), λhr, model_flux, lags)
+        plot(lags, ccf)
+    end
     if !isnothing(m.lsf)
         kernel = build(m.lsf, pars, m.templates)
         model_flux .= maths.convolve1d(model_flux, kernel)

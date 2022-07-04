@@ -23,7 +23,7 @@ function brute_force_ccf(model::SpectralForwardModel, data::SpecData1d, p0::Para
     redχ2_coarse = fill(NaN, length(vels_coarse))
 
     # Wavelength grid for the data
-    λ_data = build(model.λsolution, data, pars, model.sregion)
+    # λ_data = build(model.λsolution, data, pars, model.sregion)
 
     # Data flux, error, mask
     data_flux = data.data.flux

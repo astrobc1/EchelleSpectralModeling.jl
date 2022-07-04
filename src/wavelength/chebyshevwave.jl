@@ -11,7 +11,7 @@ function build_λsolution_chebyval2d(pixels, orders, max_pixel, max_order, coeff
             s = 0.0
             for j=1:n
                 for k=1:m
-                    s += coeffs[k, j] * maths.chebval(pixels[i] / max_pixel, j-1) * maths.chebval(orders[o] / max_order, k-1) / orders[o]
+                    s += coeffs[k, j] * maths.chebyval(pixels[i] / max_pixel, j-1) * maths.chebyval(orders[o] / max_order, k-1) / orders[o]
                 end
             end
             λ[o, i] = s
@@ -57,7 +57,7 @@ function fit_peaks_cheb2d(pixel_centers, orders, λ_centers, weights, max_pixel,
         λ_centers_running[bad] .= 0
 
         # Chebs
-        chebs_pixels, chebs_orders = get_chebvals(pixel_centers_running, orders, max_pixel, max_order, deg_intra_order, deg_inter_order)
+        chebs_pixels, chebs_orders = get_chebyvals(pixel_centers_running, orders, max_pixel, max_order, deg_intra_order, deg_inter_order)
         
         # Loss
         loss = (coeffs) -> begin
@@ -90,7 +90,7 @@ function fit_peaks_cheb2d(pixel_centers, orders, λ_centers, weights, max_pixel,
 end
 
 """
-get_chebvals(pixels, orders, max_pixel::Real, max_order::Real, deg_intra_order::Int, deg_inter_order::Int)
+get_chebyvals(pixels, orders, max_pixel::Real, max_order::Real, deg_intra_order::Int, deg_inter_order::Int)
 A standard median filter where x_out[i, j] = median(x[i-w2:i+w2, j-w2:j+w2]) where w2 = ceil(width / 2).
 """
 function get_chebyvals(pixels::AbstractVector{<:Real}, orders::AbstractVector{<:Real}, max_pixel::Real, max_order::Real, deg_intra_order::Int, deg_inter_order::Int)
