@@ -59,8 +59,6 @@ function IterativeSpectralRVEnsembleProblem(;spectrograph::String, filenames::Ab
     return IterativeSpectralRVEnsembleProblem(data, model, obj, augmenter)
 end
 
-fdaskjfkdasjkljf
-
 """
     get_init_parameters(ensemble::IterativeSpectralRVEnsembleProblem)
 Gets the initial parameters for all observations.
