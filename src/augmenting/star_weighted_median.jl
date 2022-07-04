@@ -2,6 +2,9 @@ using EchelleBase
 
 export WeightedMedianAugmenter
 
+"""
+Augment the stellar template variable by computing the weighted median of the residuals in the barycentric frame. Weights are proportional to 1 / rms^2.
+"""
 struct WeightedMedianAugmenter <: TemplateAugmenter
 end
 

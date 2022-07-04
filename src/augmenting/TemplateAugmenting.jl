@@ -5,6 +5,9 @@ using DelimitedFiles
 
 export TemplateAugmenter, augment_star!
 
+"""
+    Base type for a template augmenter.
+"""
 abstract type TemplateAugmenter end
 
 function augment_star! end
