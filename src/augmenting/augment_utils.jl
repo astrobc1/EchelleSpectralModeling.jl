@@ -75,6 +75,8 @@ function estimate_initial_stellar_template(model::SpectralForwardModel, data::Ve
     smooth_width = 7 * nanmedian(diff(data_λ0))
     star_flux .= maths.poly_filter(λ, star_flux, width=smooth_width, deg=3)
 
+    star_flux ./= maths.weighted_median(star_flux, p=0.999)
+
     # Return
     return star_flux
 
