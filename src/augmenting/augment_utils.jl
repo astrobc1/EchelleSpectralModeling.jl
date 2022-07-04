@@ -33,6 +33,7 @@ function estimate_initial_stellar_template(model::SpectralForwardModel, data::Ve
         tell_flux = build(model.tellurics, p0s[1], model.templates)
         if !isnothing(kernel)
             tell_flux .= maths.convolve1d(tell_flux, kernel)
+            tell_flux ./= maths.weighted_median(tell_flux, p=0.999)
         end
     else
         tell_flux = nothing
@@ -61,6 +62,8 @@ function estimate_initial_stellar_template(model::SpectralForwardModel, data::Ve
          # Remove continuum
         if !isnothing(continuum_poly_deg)
             data_corrected[:, i] ./= Continuum.estimate_continuum(1:nx, data_corrected[:, i], med_filter_width=continuum_med_filter_width, deg=continuum_poly_deg).(1:nx)
+        else
+            data_corrected[:, i] ./= maths.weighted_median(data_corrected[:, i], p=0.98)
         end
         data_corrected[:, i] .= maths.median_filter1d(data_corrected[:, i], 3)
     end
