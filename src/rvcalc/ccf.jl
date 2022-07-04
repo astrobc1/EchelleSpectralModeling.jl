@@ -8,7 +8,7 @@ using Infiltrator
     brute_force_ccf(model::SpectralForwardModel, data::SpecData1d, p0::Parameters; vel_window=400_000, vel_step=10)
 Calculates a brute force ccf (really a reduced chi-square curve) by stepping through velocity space.
 """
-function brute_force_ccf(model::SpectralForwardModel, data::SpecData1d, p0::Parameters; vel_window_coarse=200_000, vel_step_coarse=100, vel_step_fine=10, vel_window_fine=1000)
+function brute_force_ccf(model::SpectralForwardModel, data::SpecData1d, p0::Parameters; vel_window_coarse=1_000, vel_step_coarse=20, vel_step_fine=10, vel_window_fine=200)
     
     # Copy init params
     pars = deepcopy(p0)
@@ -83,8 +83,9 @@ function brute_force_ccf(model::SpectralForwardModel, data::SpecData1d, p0::Para
     try
         xcorr_rv = vels_fine[M] - (vel_step_fine / 2) * (redχ2_fine[M+1] - redχ2_fine[M-1]) / (redχ2_fine[M-1] - 2 * redχ2_fine[M] + redχ2_fine[M+1])
         n_good = sum(data_mask)
-        xcorr_rv_unc = sqrt((2 * vel_step_fine^2) / (redχ2_fine[M-1] - 2 * redχ2_fine[M] + redχ2_fine[M+1])) / sqrt(n_good)
+        xcorr_rv_unc = sqrt((2 * vel_step_fine^2) / (redχ2_fine[M-1] - 2 * redχ2_fine[M] + redχ2_fine[M+1])) / sqrt(n_good) # IS THIS DIVISION CORRECT? OTHERWISE ERRORS ARE SUSPICOUSLY LARGE?
     catch
+        @warn "CCF parabola fitting failed for [$(data)]"
         xcorr_rv = NaN
         xcorr_rv_unc = NaN
     end

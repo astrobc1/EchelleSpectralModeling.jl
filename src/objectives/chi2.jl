@@ -13,6 +13,10 @@ struct Chi2 <: SpectralModelObjectiveFunction
     remove_edges::Int
 end
 
+"""
+    Chi2(;flag_n_worst=10, remove_edges=4)
+Construct a Chi2 objective. The worst `flag_n_worst` pixels are ignored after having masked `remove_edges` on each side.
+"""
 Chi2(;flag_n_worst=10, remove_edges=4) = Chi2(flag_n_worst, remove_edges)
 
 """

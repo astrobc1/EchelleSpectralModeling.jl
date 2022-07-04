@@ -36,14 +36,23 @@ Gets the spectrograph as a string for this ensemble.
 SpectralData.get_spectrograph(ensemble::IterativeSpectralRVEnsembleProblem) = String(typeof(ensemble).parameters[1])
 
 """
-    IterativeSpectralRVEnsembleProblem(;spectrograph::String, data_input_path::String, filelist::String, model, obj)
+    IterativeSpectralRVEnsembleProblem(;spectrograph::String, data_input_path::String, filelist::String, model::AbstractSpectralForwardModel, obj::SpectralModelObjectiveFunction, augmenter::TemplateAugmenter)
+    IterativeSpectralRVEnsembleProblem(;spectrograph::String, filenames::AbstractVector{String}, model::AbstractSpectralForwardModel, obj::SpectralModelObjectiveFunction, augmenter::TemplateAugmenter)
 Construct an IterativeSpectralRVEnsembleProblem object.
 """
-function IterativeSpectralRVEnsembleProblem(;spectrograph::String, data_input_path::String, filelist::String, model, obj, augmenter)
+function IterativeSpectralRVEnsembleProblem(;spectrograph::String, data_input_path::String, filelist::String, model::AbstractSpectralForwardModel, obj::SpectralModelObjectiveFunction, augmenter::TemplateAugmenter)
     if string(data_input_path[end]) != Base.Filesystem.path_separator
         data_input_path *= Base.Filesystem.path_separator
     end
     data = [SpecData1d(data_input_path * fname, spectrograph, model.sregion) for fname ∈ eachline(data_input_path * filelist) if !startswith(fname, "#")]
+    jds = [parse_exposure_start_time(d) for d ∈ data]
+    ss = sortperm(jds)
+    data .= data[ss]
+    return IterativeSpectralRVEnsembleProblem(data, model, obj, augmenter)
+end
+
+function IterativeSpectralRVEnsembleProblem(;spectrograph::String, filenames::AbstractVector{String}, model::AbstractSpectralForwardModel, obj::SpectralModelObjectiveFunction, augmenter::TemplateAugmenter)
+    data = [SpecData1d(fname, spectrograph, model.sregion) for fname ∈ filenames]
     jds = [parse_exposure_start_time(d) for d ∈ data]
     ss = sortperm(jds)
     data .= data[ss]

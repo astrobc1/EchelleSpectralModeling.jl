@@ -15,10 +15,17 @@ export compute_rvs
 const PATHSEP = Base.Filesystem.path_separator
 
 """
-    compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, tag, n_iterations::Int, do_ccf::Bool, verbose::Bool=false)
+    compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path::String, tag::String, n_iterations::Int, do_ccf::Bool, initial_star_from_data::Bool=false, continuum_poly_deg_estimate::Union{Int, Nothing}=nothing, verbose::Bool=true)
 Primary method to iteratively compute the RVs for an IterativeSpectralRVEnsembleProblem object.
+Args:
+    - `output_path::String`: Within `output_path`, a new directory called `<spectrograph>_<tag>` will be created, containing all results.
+    - `tag::String`: A unique tag to identify the results with. This tag will be included in the primary output directory.
+    - `do_ccf::Bool`: Whether or not to perform a CCF analysis, computing the a CCF-derived RV and RV error.
+    - `initial_star_from_data::Bool`: Whether or not to initialize the star in series from the data before any fitting is performed.
+    - `continuum_poly_deg_estimate::Bool`: If `initial_star_from_data=true`, and this value is not `nothing`, a polynomial of degree `continuum_poly_deg_estimate` will be estimated and removed from each spectrum individually before estimating the initial stellar template.
+    - `verbose::Bool`: If `true`, the details of each fit will be printed.
 """
-function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path, tag, n_iterations::Int, do_ccf::Bool, initial_star_from_data::Bool=false, continuum_poly_deg_estimate=nothing, verbose::Bool=true)
+function compute_rvs(ensemble::IterativeSpectralRVEnsembleProblem; output_path::String, tag::String, n_iterations::Int, do_ccf::Bool, initial_star_from_data::Bool=false, continuum_poly_deg_estimate::Union{Int, Nothing}=nothing, verbose::Bool=true)
 
     # Start the main clock!
     time_start_main = time()

@@ -5,7 +5,12 @@ export estimate_initial_stellar_template
 
 using Infiltrator
 
-function estimate_initial_stellar_template(model::SpectralForwardModel, data::Vector{SpecData1d{S}}, p0s::Vector{Parameters}; continuum_poly_deg=nothing, continuum_med_filter_width=101) where{S}
+"""
+    estimate_initial_stellar_template(model::SpectralForwardModel, data::Vector{SpecData1d{S}}, p0s::Vector{Parameters}; continuum_poly_deg::Union{Int, Nothing}=nothing, continuum_med_filter_width::Int=101) where{S}
+Estimates the stellar template from the data itself. This works best when the spectrum is dominated by stellar features, telluric features are sparse, and **there is no gas cell**. The wavelength grid should also be known a priori. The template is estimated by first dividing out the convolved telluric model (scaled according to the airmass of the observation) as well as an optional estimate to the continuum. The resulting modified observations are then shifted to the barycenter frame and a median reduction provides an estimate of the initial stellar template. This template is then upsampled onto the the high-resolution model grid.
+- `continuum_poly_deg_estimate::Bool`: If this value is not `nothing`, a polynomial of degree `continuum_poly_deg_estimate` will be estimated and removed from each spectrum individually before estimating the initial stellar template.
+"""
+function estimate_initial_stellar_template(model::SpectralForwardModel, data::Vector{SpecData1d{S}}, p0s::Vector{Parameters}; continuum_poly_deg::Union{Int, Nothing}=nothing, continuum_med_filter_width::Int=101) where{S}
 
     # Numbers
     nx = length(data[1].data.flux)

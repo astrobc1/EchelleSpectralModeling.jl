@@ -6,13 +6,17 @@ using Infiltrator
 export RMS
 
 """
-    Container for a RMS objective.
+    Container for a RMS objective (uniform weights).
 """
 struct RMS <: SpectralModelObjectiveFunction
     flag_n_worst::Int
     remove_edges::Int
 end
 
+"""
+    RMS(;flag_n_worst=10, remove_edges=4)
+Construct an RMS objective. The worst `flag_n_worst` pixels are ignored after having masked `remove_edges` on each side.
+"""
 RMS(;flag_n_worst=10, remove_edges=4) = RMS(flag_n_worst, remove_edges)
 
 """

@@ -8,7 +8,6 @@ using Infiltrator
 
 export SplineλSolution
 
-
 struct SplineλSolution <: SpectralModelComponent
     n_splines::Int
     bounds::Vector{Float64}
@@ -16,7 +15,7 @@ end
 
 """
     SplineλSolution(;n_splines::Int, bounds::Vector{Float64})
-Construct a SplineλSolution model component with `n_splines` (# of knots = `n_splines + 1`). Each knot (in units of wavelength) is bounded by `bounds`.
+Construct a SplineλSolution model component with `n_splines` (`# of knots = n_splines + 1`). Each knot (in units of wavelength) is bounded by `bounds`.
 """
 SplineλSolution(;n_splines::Int, bounds::Vector{Float64}) = SplineλSolution(n_splines, bounds)
 
@@ -29,7 +28,6 @@ function get_λ_lagrange_zero_points(m::SplineλSolution, sregion, λ_estimate)
     λ_zero_points = λ_estimate[pixel_set_points]
     return λ_zero_points
 end
-
 
 function EchelleSpectralModeling.build(m::SplineλSolution, data::SpecData1d, pars::Parameters, sregion::SpecRegion1d)
     pixel_lagrange_points = get_pixel_lagrange_points(m, sregion)

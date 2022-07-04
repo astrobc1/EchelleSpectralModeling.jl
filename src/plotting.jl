@@ -4,13 +4,13 @@ using NaNStatistics
 using EchelleBase
 using EchelleSpectralModeling
 
-export plot_spectrum_fit
+export plot_spectrum_fit, plot_rvs
 
 """
-    plot_spectrum_fit(data, model, pars, iteration::Int, output_path::String)
+    plot_spectrum_fit(data::SpecData1d, model::SpectralForwardModel, pars::Parameters, iteration::Int, output_path::String)
 Plots the data and model.
 """
-function plot_spectrum_fit(data, model, pars, iteration::Int, output_path::String)
+function plot_spectrum_fit(data::SpecData1d, model::SpectralForwardModel, pars::Parameters, iteration::Int, output_path::String)
 
     # Build the model
     data_λ, model_flux = build(model, pars, data)
@@ -114,7 +114,11 @@ function plot_spectrum_fit(data, model, pars, iteration::Int, output_path::Strin
 
 end
 
-function plot_rvs(ensemble, rvs, iteration, output_path; time_offset=2450000)
+"""
+    plot_rvs(ensemble::IterativeSpectralRVEnsembleProblem, rvs::Dict, iteration::Int, output_path::String; time_offset::Real=2450000)
+Plots the rvs for a given iteration and saves the figure.
+"""
+function plot_rvs(ensemble::IterativeSpectralRVEnsembleProblem, rvs::Dict, iteration::Int, output_path::String; time_offset::Real=2450000)
 
     pygui(false)
 

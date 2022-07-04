@@ -1,5 +1,10 @@
 export bin_rvs_single_order, bin_jds, combine_rvs
 
+
+"""
+    combine_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weights::Matrix{Float64}, indices; n_iterations=10, nσ=4)
+Wrapper to iteratively combines RVs from different chunks or orders in a relative fashion. After each iterations, outliers are flagged according to their deviation from the corresponding binned value.
+"""
 function combine_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weights::Matrix{Float64}, indices; n_iterations=10, nσ=4)
     weights = copy(weights)
     n_chunks, n_spec = size(rvs)
@@ -25,6 +30,10 @@ function combine_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weights::Matri
     return rvs_single_out, unc_single_out, t_binned_out, rvs_binned_out, unc_binned_out
 end
 
+"""
+    combine_relative_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weights::Matrix{Float64}, indices)
+Combines RVs from different chunks or orders in a relative fashion according to Rajpaul et al. 2020 (2020MNRAS.492.3960R).  This also bins RVs according to indices, a vector of vectors, where each sub-vector contains the starting and ending entry of a bin (both inclusive). Such a vector is returned by `bin_jds`.
+"""
 function combine_relative_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weights::Matrix{Float64}, indices)
 
     # Numbers
@@ -120,6 +129,10 @@ function align_chunks(rvs::Matrix{Float64}, weights::Matrix{Float64})
     return rvli, wli
 end
 
+"""
+    bin_jds(jds::Vector{Float64}; sep=0.5, utc_offset=-8)
+Bins JDs (or BJDs). Returns the binned JDs as well as a vector of vectors, where each sub-vector contains the starting/ending index of the bin (both inclusive) - e.g., `[[1, 5], [6, 8], [9, 17], [18, 21]]`.
+"""
 function bin_jds(jds::Vector{Float64}; sep=0.5, utc_offset=-8)
     
     # Number of spectra

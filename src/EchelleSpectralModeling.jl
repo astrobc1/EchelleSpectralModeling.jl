@@ -28,9 +28,6 @@ include("wavelength/Wavelength.jl")
 # Primary model container
 include("spectralmodel.jl")
 
-# Plotting
-include("plotting.jl")
-
 # RV specific methods
 include("rvcalc/rvcalc.jl")
 
@@ -44,6 +41,9 @@ include("augmenting/TemplateAugmenting.jl")
 
 # Primary container to hold data, model, objective, augmenter
 include("ensemble.jl")
+
+# Plotting
+include("plotting.jl")
 
 # Fitting api
 include("fitting.jl")

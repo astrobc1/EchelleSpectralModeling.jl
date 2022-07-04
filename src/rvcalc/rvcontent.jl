@@ -6,7 +6,7 @@ using Infiltrator
     compute_rv_content(model::SpectralForwardModel, pars::Parameters, data::SpecData1d; snr=1)
 Computes the stellar rv content at each pixel and co-added across all pixels, accounting for the gas cell flux and corresponding calibration errors, as well as the telluric flux.
 """
-function compute_rv_content(model::SpectralForwardModel, pars::Parameters, data::SpecData1d; include_gascell_content=true, include_telluric_content=true, snr=1)
+function compute_rv_content(model::SpectralForwardModel, pars::Parameters, data::SpecData1d; snr=1)
 
     # Data wave grid
     data_λ = build(model.λsolution, data, pars, model.sregion)
