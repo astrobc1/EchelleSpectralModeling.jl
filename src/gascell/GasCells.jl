@@ -18,7 +18,7 @@ end
     GasCell(;input_file::String, shift_guess::Vector{Float64}=[0.0, 0.0, 0.0], depth_guess::Vector{Float64}=[1.0, 1.0, 1.0])
 Constructs a GasCell model component.
 """
-GasCell(;input_file::String, vel_guess::Vector{Float64}=[0.0, 0.0, 0.0], τ_guess::Vector{Float64}=[1.0, 1.0, 1.0]) = GasCell(input_file, vel_guess, τ_guess)
+GasCell(;input_file::String, vel_guess::Vector{Float64}=[0.0, 0.0, 0.0], τ_guess::Vector{Float64}=[1.0, 1.0, 1.0]) = GasCell(input_file, float.(vel_guess), float.(τ_guess))
 
 function EchelleSpectralModeling.build(m::GasCell, pars::Parameters, templates::Dict)
     return build(m, templates["λ"], templates["gascell"], pars["τ_gascell"].value, pars["vel_gascell"].value)
