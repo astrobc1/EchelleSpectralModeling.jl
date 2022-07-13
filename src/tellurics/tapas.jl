@@ -37,7 +37,7 @@ function has_water_features(m::TAPASTellurics, templates::Dict, kernel=nothing)
         flux .= maths.convolve1d(flux, kernel)
         flux ./= nanmaximum(flux)
     end
-    return any(flux .< 1 - m.min_feature_flux)
+    return any(flux .< 1 - m.min_feature_depth)
 end
 function has_airmass_features(m::TAPASTellurics, templates::Dict, kernel=nothing)
     flux = templates["tellurics"][:, 2]
@@ -45,7 +45,7 @@ function has_airmass_features(m::TAPASTellurics, templates::Dict, kernel=nothing
         flux .= maths.convolve1d(flux, kernel)
         flux ./= nanmaximum(flux)
     end
-    return any(flux .< 1 - m.min_feature_flux)
+    return any(flux .< 1 - m.min_feature_depth)
 end
 
 function load_tapas_templates(input_file::String, λ_out)
@@ -101,7 +101,7 @@ function get_mask(m::TAPASTellurics, pars::Parameters, templates::Dict, kernel=n
     end
     tell_flux = maths.cspline_interp(templates["λ"], tell_flux, λ_out)
     mask = zeros(length(tell_flux))
-    good = findall(tell_flux .> m.min_feature_flux)
+    good = findall(tell_flux .> m.min_feature_depth)
     mask[good] .= 1
     return mask
 end
