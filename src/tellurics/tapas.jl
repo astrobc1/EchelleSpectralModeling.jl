@@ -8,18 +8,18 @@ export TAPASTellurics, has_water_features, has_airmass_features, get_mask
 
 struct TAPASTellurics <: SpectralModelComponent
     input_file::String
-    min_feature_flux::Float64
+    min_feature_depth::Float64
     vel_guess::Vector{Float64}
     τ_water_guess::Vector{Float64}
     τ_airmass_guess::Vector{Float64}
 end
 
 """
-    TAPASTellurics(;input_file::String, min_feature_flux=0.02, Δv_guess=[-100, 10, 100], τ_water_guess=[0.1, 1.1, 4], τ_airmass_guess=[0.8, 1.1, 3])
-Construct a TAPASTellurics model component. The templates are stored within `input_file`. C02, N2O, O2, O3, and CH4 are combined into a single template and utilize the parameter `airmass_depth`. H2O is kept separate and utilizes `water_depth`. If there are no features less than `min_feature_flux`, the parameters for this chunk are fixed for the appropriate template.
+    TAPASTellurics(;input_file::String, min_feature_depth=0.02, Δv_guess=[-100, 10, 100], τ_water_guess=[0.1, 1.1, 4], τ_airmass_guess=[0.8, 1.1, 3])
+Construct a TAPASTellurics model component. The templates are stored within `input_file`. C02, N2O, O2, O3, and CH4 are combined into a single template and utilize the parameter `airmass_depth`. H2O is kept separate and utilizes `water_depth`. If there are no features less than `min_feature_depth`, the parameters for this chunk are fixed for the appropriate template.
 """
-function TAPASTellurics(;input_file::String, min_feature_flux::Real=0.02, vel_guess::Vector{<:Real}=[-100, 10, 100], τ_water_guess::Vector{<:Real}=[0.1, 1.1, 4], τ_airmass_guess::Vector{<:Real}=[0.8, 1.1, 3])
-    return TAPASTellurics(input_file, min_feature_flux, vel_guess, τ_water_guess, τ_airmass_guess)
+function TAPASTellurics(;input_file::String, min_feature_depth::Real=0.02, vel_guess::Vector{<:Real}=[-100, 10, 100], τ_water_guess::Vector{<:Real}=[0.1, 1.1, 4], τ_airmass_guess::Vector{<:Real}=[0.8, 1.1, 3])
+    return TAPASTellurics(input_file, min_feature_depth, vel_guess, τ_water_guess, τ_airmass_guess)
 end
 
 function EchelleSpectralModeling.build(m::TAPASTellurics, pars::Parameters, templates::Dict)

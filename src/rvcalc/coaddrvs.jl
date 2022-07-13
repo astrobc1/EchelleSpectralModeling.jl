@@ -6,10 +6,14 @@ export bin_rvs_single_order, bin_jds, combine_rvs
 Wrapper to iteratively combines RVs from different chunks or orders in a relative fashion. After each iterations, outliers are flagged according to their deviation from the corresponding binned value.
 """
 function combine_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weights::Matrix{Float64}, indices; n_iterations=10, nσ=4)
+    rvs = copy(rvs)
     weights = copy(weights)
     n_chunks, n_spec = size(rvs)
     n_bins = length(indices)
     norm_residuals = zeros(n_chunks, n_spec)
+    bad = findall(.~isfinite.(rvs) .|| .~isfinite.(weights) .|| (weights .== 0))
+    rvs[bad] .= NaN
+    weights[bad] .= 0
     rvs_single_out, unc_single_out, t_binned_out, rvs_binned_out, unc_binned_out = combine_relative_rvs(bjds, rvs, weights, indices)
     for i=1:n_iterations
         println("Iteration $i")
@@ -36,12 +40,24 @@ Combines RVs from different chunks or orders in a relative fashion according to 
 """
 function combine_relative_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weights::Matrix{Float64}, indices)
 
+    rvs = copy(rvs)
+    weights = copy(weights)
+    n_chunks, n_spec = size(rvs)
+    n_bins = length(indices)
+    bad = findall(.~isfinite.(rvs) .|| .~isfinite.(weights) .|| (weights .== 0))
+    rvs[bad] .= NaN
+    weights[bad] .= 0
+    bjds_matrix = collect(transpose(repeat(bjds, n_spec, n_chunks)))
+
     # Numbers
     n_chunks, n_spec = size(rvs)
     n_bins = length(indices)
 
     # Align chunks
     rvli, wli = align_chunks(rvs, weights)
+    bad = findall(.~isfinite.(rvli) .|| .~isfinite.(wli) .|| (wli .== 0))
+    rvli[bad] .= NaN
+    wli[bad] .= 0
     
     # Output arrays
     rvs_single_out = fill(NaN, n_spec)
@@ -49,15 +65,16 @@ function combine_relative_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weigh
     t_binned_out = fill(NaN, n_bins)
     rvs_binned_out = fill(NaN, n_bins)
     unc_binned_out = fill(NaN, n_bins)
-    bad = findall(.~isfinite.(wli))
-    wli[bad] .= 0
         
     # Per-observation RVs
     for i=1:n_spec
-        rvs_single_out[i] = maths.weighted_mean(rvli[:, i], wli[:, i])
-        n_good = length(findall(wli[:, i] .> 0))
+        rr, ww = rvli[:, i], wli[:, i]
+        n_good = length(findall(ww .> 0))
         if n_good > 0
-            unc_single_out[i] = maths.weighted_stddev(rvli[:, i], wli[:, i]) / sqrt(n_good)
+            rvs_single_out[i] = maths.weighted_mean(rr, ww)
+        end
+        if n_good > 1
+            unc_single_out[i] = maths.weighted_stddev(rr, ww) / sqrt(n_good)
         end
     end
         
@@ -66,38 +83,46 @@ function combine_relative_rvs(bjds::Vector{Float64}, rvs::Matrix{Float64}, weigh
         f, l = indices[i]
         rr = rvli[:, f:l][:]
         ww = wli[:, f:l][:]
-        bad = findall(.~isfinite.(rr))
-        ww[bad] .= 0
         good = findall(ww .> 0)
-        rvs_binned_out[i] = maths.weighted_mean(rr, ww)
         if length(good) > 0
+            rvs_binned_out[i] = maths.weighted_mean(rr, ww)
+        end
+        if length(good) > 1
             unc_binned_out[i] = maths.weighted_stddev(rr, ww) / sqrt(length(good))
         end
-        t_binned_out[i] = mean(bjds[f:l])
+        t_binned_out[i] = mean(bjds_matrix[:, f:l][:][good])
     end
     
     return rvs_single_out, unc_single_out, t_binned_out, rvs_binned_out, unc_binned_out
 end
 
-function bin_rvs_single_order(rvs::Vector{Float64}, weights::Vector{Float64}, indices::Vector{Float64})
+function bin_rvs_single_order(bjds::Vector{Float64}, rvs::Vector{Float64}, weights::Vector{Float64}, indices)
 
     # The number of spectra and nights
     n_spec = length(rvs)
-    n_bins = len(indices)
+    n_bins = length(indices)
     
     # Initialize the binned rvs and uncertainties
-    rvs_binned = fill(n_bins, NaN)
-    unc_binned = fill(n_bins, NaN)
+    t_binned = fill(NaN, n_bins)
+    rvs_binned = fill(NaN, n_bins)
+    unc_binned = fill(NaN, n_bins)
     
     # Bin
     for i=1:n_bins
         f, l = indices[i]
-        rr = @view rvs[f:l+1]
-        ww = @view weights[f:l+1]
-        rvs_binned[i], unc_binned[i] = maths.weighted_combine(rr, ww, yerr, err_type="empirical")
+        rr = rvs[f:l]
+        ww = weights[f:l]
+        good = findall(ww .> 0)
+        if length(good) > 0
+            rvs_binned[i] = maths.weighted_mean(rr, ww)
+        end
+        if length(good) > 1
+            unc_binned[i] = maths.weighted_stddev(rr, ww) / sqrt(length(good))
+        end
+        t_binned[i] = mean(bjds[f:l][good])
     end
-            
-    return rvs_binned, unc_binned
+
+    return t_binned, rvs_binned, unc_binned
 end
 
 function align_chunks(rvs::Matrix{Float64}, weights::Matrix{Float64})
