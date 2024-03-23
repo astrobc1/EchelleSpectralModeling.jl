@@ -14,9 +14,6 @@ using Polynomials
 using StatsBase, Statistics
 using Infiltrator
 
-using Pkg
-Pkg.develop(path="/Users/cale/Codes/JuliaProjects/IterativeNelderMead/")
-Pkg.develop(path="/Users/cale/Codes/JuliaProjects/Echelle/")
 using IterativeNelderMead, Echelle
 
 include("parameters.jl")
