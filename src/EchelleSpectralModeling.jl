@@ -29,6 +29,7 @@ include("poly_continuum.jl")
 include("static_wls.jl")
 include("gascell.jl")
 include("gausshermite_lsf.jl")
+include("gausshermite_chromatic_lsf.jl")
 
 include("model.jl")
 

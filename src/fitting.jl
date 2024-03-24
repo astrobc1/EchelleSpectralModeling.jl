@@ -27,12 +27,8 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
     loss_func = (x) -> begin
         ptest.values .= x
         _, y, lsf_kernel = build(model, ptest, data)
-        if enforce_positivity(model.lsf)
-            if lsf_kernel isa Array{<:Real}
-                if any(lsf_kernel .< 0)
-                    return Inf
-                end
-            end
+        if !check_positive(model.lsf, lsf_kernel)
+            return Inf
         end
         residuals = data.spec .- y
         loss = redchi2loss(residuals, data.specerr; mask_worst, mask_edges, n_params=n_varied_params)
@@ -62,7 +58,8 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
         return y[lsq_fitting_inds]
     end
     wt = 1 ./ data.specerr[lsq_fitting_inds].^2
-    lsq_result = LsqFit.curve_fit(model_func, lsq_fitting_inds, data.spec[lsq_fitting_inds], wt, pbest.values[varied_inds], lower=lbv, upper=ubv, maxIter=0)
+    #lsq_result = LsqFit.curve_fit(model_func, lsq_fitting_inds, data.spec[lsq_fitting_inds], wt, pbest.values[varied_inds], lower=lbv, upper=ubv, maxIter=0)
+    lsq_result = LsqFit.curve_fit(model_func, lsq_fitting_inds, data.spec[lsq_fitting_inds], pbest.values[varied_inds], lower=lbv, upper=ubv, maxIter=0)
 
     # Set errors
     pbest.errors[varied_inds] .= stderror(lsq_result)
@@ -91,7 +88,7 @@ function fit_spectra(
 
         # Try to fit
         r = nothing
-        #try
+        try
 
             # Time the fit
             ti = time()
@@ -106,9 +103,9 @@ function fit_spectra(
             println("Parameters:")
             println("$(r.pbest)")
 
-        #catch e
-           #@error "Could not fit $(basename(metadata(d, "filename")))" exception=(e, catch_backtrace())
-        #end
+        catch e
+           @error "Could not fit $(basename(metadata(d, "filename")))" exception=(e, catch_backtrace())
+        end
 
         # Plot
         if plots

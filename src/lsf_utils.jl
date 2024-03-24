@@ -1,4 +1,4 @@
-function convolve1d(x::Vector{<:Real}, k::Vector{<:Real})
+function convolve1d(x::AbstractVector{<:Real}, k::AbstractVector{<:Real})
     nx = length(x)
     nk = length(k)
     n_pad = Int(floor(nk / 2))

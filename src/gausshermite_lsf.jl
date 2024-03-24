@@ -70,4 +70,10 @@ function initialize!(lsf::GaussHermiteLSF, templates::Dict{String, <:Any}, param
 end
 
 
-enforce_positivity(lsf::GaussHermiteLSF) = lsf.deg > 0
+function check_positive(lsf::GaussHermiteLSF, kernel::Vector{<:Real})
+    if lsf.deg > 0
+        return all(kernel .>= 0)
+    else
+        return true
+    end
+end
