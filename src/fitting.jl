@@ -35,7 +35,6 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
             loss = redchi2loss(residuals, data.specerr; mask_worst, mask_edges, n_params=n_varied_params)
             return loss
         catch e
-            #@warn "Loss function return non finite value with parameters:\n$(ptest)"
             return Inf
         end
     end
@@ -82,55 +81,69 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
     
 end
 
+function fit_spectrum_wrapper(
+        data::DataFrame, model::SpectralForwardModel, params::Parameters, iteration::Int;
+        fitting_kwargs::NamedTuple,
+    )
+
+    # Try to fit
+    r = nothing
+    try
+
+        # Time the fit
+        ti = time()
+        
+        # Fit
+        r = fit_spectrum(data, model, params, iteration; fitting_kwargs...)
+        
+        # Print results
+        println("Fit observation $(basename(metadata(data, "filename"))), Iteration $iteration, in $(round((time() - ti) / 60, digits=4)) min")
+        println("redχ2 = $(round(r.redχ2, digits=4))")
+        println("RMS = $(round(100 * r.rms, digits=4))%")
+        println("Parameters:")
+        println("$(r.pbest)")
+
+    catch e
+        @error "Could not fit $(basename(metadata(data, "filename")))" exception=(e, catch_backtrace())
+    end
+
+    # Plot
+    if plots
+        if !isnothing(r) && isfinite(r.redχ2)
+            try
+                plot_spectral_fit(data, model, r, iteration, output_path)
+            catch e
+                @error "Could not plot fit for $(basename(metadata(data, "filename")))" exception=(e, catch_backtrace())
+            end
+        end
+    end
+
+    # Return
+    return r
+
+end
+
 
 function fit_spectra(
         data::Vector{DataFrame}, model::SpectralForwardModel, params0::Vector{Parameters},
         iteration::Int, output_path::String;
-        plots::Bool=true, fitting_kwargs::NamedTuple=(;),
+        parallelize::Bool=true, plots::Bool=true, fitting_kwargs::NamedTuple=(;),
     )
 
     # Parallel fitting
-    opt_results = pmap(zip(data, params0)) do (d, p0)
-
-        # Try to fit
-        r = nothing
-        try
-
-            # Time the fit
-            ti = time()
-            
-            # Fit
-            r = fit_spectrum(d, model, p0, iteration; fitting_kwargs...)
-            
-            # Print results
-            println("Fit observation $(basename(metadata(d, "filename"))), Iteration $iteration, in $(round((time() - ti) / 60, digits=4)) min")
-            println("redχ2 = $(round(r.redχ2, digits=4))")
-            println("RMS = $(round(100 * r.rms, digits=4))%")
-            println("Parameters:")
-            println("$(r.pbest)")
-
-        catch e
-            @error "Could not fit $(basename(metadata(d, "filename")))" exception=(e, catch_backtrace())
+    if parallelize
+        opt_results = pmap(zip(data, params0)) do (d, p0)
+            fit_spectrum_wrapper(d, model, p0, iteration; fitting_kwargs)
         end
-
-        # Plot
-        if plots
-            if !isnothing(r) && isfinite(r.redχ2)
-                try
-                    plot_spectral_fit(d, model, r, iteration, output_path)
-                catch e
-                    @error "Could not plot fit for $(basename(metadata(d, "filename")))" exception=(e, catch_backtrace())
-                end
-            end
+    else
+        opt_results = map(zip(data, params0)) do (d, p0)
+            fit_spectrum_wrapper(d, model, p0, iteration; fitting_kwargs)
         end
-
-        # Return
-        return r
-
     end
 
     # Return all results
     return opt_results
+    
 end
 
 

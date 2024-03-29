@@ -3,6 +3,7 @@ export drive
 function drive(
         data::Vector{DataFrame}, model::SpectralForwardModel, params0::Vector{Parameters};
         n_iterations::Int, output_path::String,
+        parallelize::Bool=true,
         fitting_kwargs::NamedTuple=(;),
         augmenting_kwargs::NamedTuple=(;),
     )
