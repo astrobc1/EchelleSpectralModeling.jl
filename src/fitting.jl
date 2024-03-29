@@ -82,7 +82,7 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
 end
 
 function fit_spectrum_wrapper(
-        data::DataFrame, model::SpectralForwardModel, params::Parameters, iteration::Int;
+        data::DataFrame, model::SpectralForwardModel, params::Parameters, iteration::Int, output_path::String;
         plots::Bool=true, fitting_kwargs::NamedTuple,
     )
 
@@ -133,11 +133,11 @@ function fit_spectra(
     # Parallel fitting
     if parallelize
         opt_results = pmap(zip(data, params0)) do (d, p0)
-            fit_spectrum_wrapper(d, model, p0, iteration; plots, fitting_kwargs)
+            fit_spectrum_wrapper(d, model, p0, iteration, output_path; plots, fitting_kwargs)
         end
     else
         opt_results = map(zip(data, params0)) do (d, p0)
-            fit_spectrum_wrapper(d, model, p0, iteration; plots, fitting_kwargs)
+            fit_spectrum_wrapper(d, model, p0, iteration, output_path; plots, fitting_kwargs)
         end
     end
 
