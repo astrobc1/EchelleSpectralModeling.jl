@@ -43,28 +43,28 @@ function plot_spectral_fit(
     
     # Star
     if !isnothing(model.star)
-        star_spec = build(model.star, model.templates, params, data)
+        star_spec = build(model.star, model.λ, params, data)
         if !isnothing(model.lsf)
-            star_spec .= convolve_spectrum(model.lsf, star_spec, model.templates, params, data)[1]
-            axarr[1].plot(model.templates["λ"], star_spec .- 1.2, lw=1.5, color=(0,0,0,0.8), label="Star")
+            star_spec .= convolve_spectrum(model.lsf, star_spec, model.λ, params, data)[1]
+            axarr[1].plot(model.λ, star_spec .- 1.2, lw=1.5, color=(0,0,0,0.8), label="Star")
         end
     end
 
     # Tellurics
     if !isnothing(model.tellurics)
-        tell_spec = build(model.tellurics, model.templates, params, data)
+        tell_spec = build(model.tellurics, model.λ, params, data)
         if !isnothing(model.lsf)
-            tell_spec .= convolve_spectrum(model.lsf, tell_spec, model.templates, params, data)[1]
-            axarr[1].plot(model.templates["λ"], tell_spec .- 1.2, lw=1.5, color=(137/255, 96/255, 248/255, 0.5), label="Tellurics")
+            tell_spec .= convolve_spectrum(model.lsf, tell_spec, model.λ, params, data)[1]
+            axarr[1].plot(model.λ, tell_spec .- 1.2, lw=1.5, color=(137/255, 96/255, 248/255, 0.5), label="Tellurics")
         end
     end
     
     # Gas Cell
     if !isnothing(model.gascell)
-        gas_spec = build(model.gascell, model.templates, params, data)
+        gas_spec = build(model.gascell, model.λ, params, data)
         if !isnothing(model.lsf)
-            gas_spec .= convolve_spectrum(model.lsf, gas_spec, model.templates, params, data)[1]
-            axarr[1].plot(model.templates["λ"], gas_spec .- 1.2, lw=1.5, color=(129/255, 190/255, 129/255, 0.5), label="Gas Cell")
+            gas_spec .= convolve_spectrum(model.lsf, gas_spec, model.λ, params, data)[1]
+            axarr[1].plot(model.λ, gas_spec .- 1.2, lw=1.5, color=(129/255, 190/255, 129/255, 0.5), label="Gas Cell")
         end
     end
 
@@ -102,7 +102,7 @@ function plot_spectral_fit(
     axarr[2].tick_params(labelsize=14)
 
     # The title
-    fig.suptitle("$(basename(metadata(data, "filename"))), $(replace(model.star.name, "_" => " ")), $(split(output_path, PATHSEP)[end-1]), Iteration $(iteration)", fontsize=14, fontweight="bold")
+    fig.suptitle("$(basename(metadata(data, "filename"))), $(replace(model.star.name, "_" => " ")), Iteration $(iteration)", fontsize=14, fontweight="bold")
     
     # Save figure
     fname = output_path * PATHSEP * "Fits" * PATHSEP * "$(splitext(basename(metadata(data, "filename")))[1])_iter$(iteration).png"
@@ -133,7 +133,7 @@ function plot_rvs(
     end
     
     # Plot labels
-    title("$(replace(model.star.name, "_" => " ")), $(split(output_path, PATHSEP)[end-1]), Iteration $iteration")
+    title("$(replace(model.star.name, "_" => " ")), Iteration $iteration")
     ax = plt.gca()
     ax.ticklabel_format(useOffset=false, style="plain")
     xlabel("BJD - $(t0)")

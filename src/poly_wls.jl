@@ -2,32 +2,30 @@ export PolyλSolution
 
 
 struct PolyλSolution
-    deg::Int
-    bounds::Vector{Float64}
+    knots_pix::Vector{Int}
+    bounds::NTuple{2, Float64}
 end
 
-PolyλSolution(;deg::Int, bounds::Vector{<:Real}) = PolyλSolution(deg, Float64.(bounds))
 
-function build(λsolution::PolyλSolution, templates::Dict{String, <:Any}, params::Parameters, data::DataFrame)
-    deg = length(templates["λsol_knots_xs"]) - 1
-    knots_λs = [params["λ$i"] for i=1:λsolution.deg+1]
-    pfit = Polynomials.fit(ArnoldiFit, templates["λsol_knots_xs"], knots_λs, deg)
+function PolyλSolution(;pix_range::NTuple{2, Int}, deg::Int, bounds::Tuple{<:Real, <:Real})
+    knots_pix = Int.(round.(collect(range(pix_range[1], stop=pix_range[2], length=deg + 1))))
+    return PolyλSolution(knots_pix, Float64.(bounds))
+end
+
+
+function build(λsolution::PolyλSolution, params::Parameters, data::DataFrame)
+    knots_λs = [params["λ$i"] for i=1:length(λsolution.knots_pix)]
+    @assert length(knots_λs) == length(λsolution.knots_pix)
+    deg = length(knots_λs) - 1
+    pfit = Polynomials.fit(ArnoldiFit, λsolution.knots_pix, knots_λs, deg)
     y = pfit.(1:length(data.spec))
     return y
 end
 
-function initialize!(λsolution::PolyλSolution, templates::Dict{String, <:Any},  params::Vector{Parameters}, data::Vector{DataFrame})
-    templates["λsol_knots_xs"] = get_pixel_knots(λsolution, data)
-    for i in eachindex(data)
-        knots_λ0 = data[i].λ[templates["λsol_knots_xs"]]
-        for j=1:λsolution.deg+1
-            params[i]["λ$j"] = (value=knots_λ0[j], lower_bound=knots_λ0[j] + λsolution.bounds[1], upper_bound=upper_bound=knots_λ0[j] + λsolution.bounds[2])
-        end
-    end
-    return params
-end
 
-function get_pixel_knots(λsolution::PolyλSolution, data::Vector{DataFrame})
-    xi, xf = get_data_pixel_bounds(data)
-    return Int.(round.(collect(range(xi, stop=xf, length=λsolution.deg + 1))))
+function get_initial_params!(params::Parameters, λsolution::PolyλSolution, data::DataFrame)
+    knots_λ0 = data.λ[λsolution.knots_pix]
+    for i=1:length(λsolution.knots_pix)
+        params["λ$i"] = (value=knots_λ0[i], bounds=knots_λ0[i] .+ λsolution.bounds)
+    end
 end

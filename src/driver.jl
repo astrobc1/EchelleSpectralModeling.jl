@@ -1,8 +1,10 @@
 export drive
 
 function drive(
-        data::Vector{DataFrame}, model::SpectralForwardModel;
-        n_iterations::Int, output_path::String, fitting_kwargs::NamedTuple=(;),
+        data::Vector{DataFrame}, model::SpectralForwardModel, params0::Vector{Parameters};
+        n_iterations::Int, output_path::String,
+        fitting_kwargs::NamedTuple=(;),
+        augmenting_kwargs::NamedTuple=(;),
     )
 
     # Time
@@ -19,9 +21,6 @@ function drive(
     # Store all rvs in dict
     rvs = make_rvs_dict(data, n_iterations)
 
-    # Initialize model
-    params0 = initialize!(model, data)
-
     # Initialize model with the data
     params_best = deepcopy(params0)
 
@@ -30,7 +29,7 @@ function drive(
 
     # Store each stellar template
     if !isnothing(model.star)
-        stellar_templates = Vector{Any}(undef, n_iterations)
+        stellar_templates = Vector{Float64}[]
     end
 
     # Loop over iterations
@@ -46,7 +45,7 @@ function drive(
         params_best = [!isnothing(r) ? r.pbest : nothing for r in opt_results[iteration]]
 
         # Compute, plot, and save RVs
-        if !isnothing(model.star.filename) || iteration > 1
+        if !isnothing(model.star) && (!isnothing(model.star.template) || iteration > 1)
             compute_rvs_from_fits(rvs, opt_results[iteration], iteration)
             plot_rvs(model, rvs, iteration, output_path)
             save_rvs(output_path, rvs)
@@ -60,23 +59,32 @@ function drive(
         
         # Retrieve this stellar template
         if !isnothing(model.star)
-            stellar_templates[iteration] = copy(model.templates["star"])
+            if !isnothing(model.star.template)
+                push!(stellar_templates, copy(model.star.template))
+            end
             save_stellar_templates(output_path, stellar_templates, model)
         end
 
         # Augment template if we will do another fit
-        if iteration < n_iterations
-            augment_stellar_template!(model, data, opt_results[iteration])
+        if !isnothing(model.star) && iteration < n_iterations
+            augment_stellar_template!(model, data, opt_results[iteration]; augmenting_kwargs...)
         end
 
         # Activate star
-        if iteration == 1 && isnothing(model.star.filename)
-            activate_star!(params_best)
+        if !isnothing(model.star)
+            if iteration == 1 && model.star.from_flat
+                for p in params_best
+                    activate_star!(p, model.star)
+                end
+            end
         end
-
+        
+        # Print
         println("Finished iteration $iteration of $n_iterations, $(split(output_path, PATHSEP)[end]), in $(round((time() - ti) / 3600, digits=4)) hours")
+
     end
 
+    # Print
     println("Finished $(split(output_path, PATHSEP)[end]) in $(round((time() - ti_main) / 3600, digits=4)) hours")
 
 end
@@ -134,18 +142,9 @@ end
 
 
 function save_stellar_templates(output_path::String, stellar_templates::Vector{<:Any}, model::SpectralForwardModel)
-    fname = output_path * "stellar_templates.jld"
-    jldsave(fname; λ=model.templates["λ"], stellar_templates)
-end
-
-
-function activate_star!(params::Vector{Parameters})
-    for i in eachindex(params)
-        p = params[i]
-        if p.lower_bounds[p.indices["vel_star"]] != p.upper_bounds[p.indices["vel_star"]]
-            params[i].vary[params[i].indices["vel_star"]] = true
-        end
-    end
+    fname = output_path * "stellar_templates.txt"
+    out = hcat(model.λ, stellar_templates...)
+    writedlm(fname, out, ',')
 end
 
 function save_data_model(output_path::String, data::Vector{DataFrame}, model::SpectralForwardModel)

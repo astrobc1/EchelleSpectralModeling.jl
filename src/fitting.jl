@@ -8,10 +8,10 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
     varied_inds = findall(params.vary)
     n_varied_params = length(varied_inds)
     pnames = collect(keys(params.indices))
-    pnames_vary = pnames[varied_inds]
-    p0v = params.values[varied_inds]
-    lbv = params.lower_bounds[varied_inds]
-    ubv = params.upper_bounds[varied_inds]
+    lb = getindex.(params.bounds, 1)
+    ub = getindex.(params.bounds, 2)
+    lbv = getindex.(params.bounds[varied_inds], 1)
+    ubv = getindex.(params.bounds[varied_inds], 2)
 
     # Good indices
     data_inds_good = findall(@. isfinite(data.spec) && isfinite(data.specerr) && (data.specerr > 0) && (data.spec > 0))
@@ -37,7 +37,7 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
 
     # Fit
     nm_result = IterativeNelderMead.optimize(loss_func, params.values;
-                        lower_bounds=params.lower_bounds, upper_bounds=params.upper_bounds, vary=params.vary,
+                        lower_bounds=lb, upper_bounds=ub, vary=params.vary,
                         options=(;ftol_rel=1E-8)
                     )
 
@@ -62,7 +62,7 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
     lsq_result = LsqFit.curve_fit(model_func, lsq_fitting_inds, data.spec[lsq_fitting_inds], pbest.values[varied_inds], lower=lbv, upper=ubv, maxIter=0)
 
     # Set errors
-    pbest.errors[varied_inds] .= stderror(lsq_result)
+    pbest.errors[varied_inds] .= get_stderrors(lsq_result)
 
     # Current loss
     redχ2 = redchi2loss(residuals_best, data.specerr; mask_worst, mask_edges, n_params=n_varied_params)
@@ -97,7 +97,7 @@ function fit_spectra(
             r = fit_spectrum(d, model, p0, iteration; fitting_kwargs...)
             
             # Print results
-            println("Fit observation $(basename(metadata(d, "filename"))), Iteration $iteration, $(split(output_path, PATHSEP)[end-1]), in $(round((time() - ti) / 60, digits=4)) min")
+            println("Fit observation $(basename(metadata(d, "filename"))), Iteration $iteration, in $(round((time() - ti) / 60, digits=4)) min")
             println("redχ2 = $(round(r.redχ2, digits=4))")
             println("RMS = $(round(100 * r.rms, digits=4))%")
             println("Parameters:")
@@ -129,7 +129,7 @@ end
 
 
 
-function LsqFit.stderror(fit::LsqFit.LsqFitResult; rtol::Real=NaN, atol::Real=0)
+function get_stderrors(fit::LsqFit.LsqFitResult; rtol::Real=NaN, atol::Real=0)
     # computes standard error of estimates from
     #   fit   : a LsqFitResult from a curve_fit()
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check

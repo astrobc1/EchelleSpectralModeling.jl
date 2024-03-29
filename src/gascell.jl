@@ -1,28 +1,34 @@
-export GasCell
+export GasCell, read_gascell
+
 
 struct GasCell
-    filename::String
-    τ_bounds::Vector{Float64}
+    template::Vector{Float64}
+    τ_bounds::NTuple{2, Float64}
 end
 
-function GasCell(;filename::String, τ_bounds::Vector{<:Real}=[1, 1])
-    return GasCell(filename, Float64.(τ_bounds))
+
+GasCell(template::Vector{<:Real}; τ_bounds::Tuple{<:Real, <:Real}=(1, 1)) = GasCell(Float64.(template), Float64.(τ_bounds))
+
+
+function build(gascell::GasCell, λ::Vector{<:Real}, params::Parameters, ::DataFrame)
+    return gascell.template .^ params["τ_gascell"]
 end
 
-function build(::GasCell, templates::Dict{String, <:Any}, params::Parameters, ::DataFrame)
-    return templates["gascell"] .^ params["τ_gascell"]
-end
 
-function initialize!(gascell::GasCell, templates::Dict{String, <:Any}, params::Vector{Parameters}, data::Vector{DataFrame})
-    λ_raw, s = jldopen(gascell.filename) do f
-        f["wave"], f["spec"]
+function read_gascell(filename::String, λ_out::Vector{<:Real}; q::Real=1)
+    println("Reading $filename")
+    template = readdlm(filename, ',', comments=true, comment_char='#')
+    gas_λ, gas_spec = template[:, 1], template[:, 2]
+    good = findall(λ_out[1] - 1 .<= gas_λ .<= λ_out[end] + 1)
+    gas_spec = interp1d(gas_λ[good], gas_spec[good], λ_out)
+    if !isnothing(gas_spec)
+        gas_spec ./= nanquantile(gas_spec, q)
     end
-    good = findall(templates["λ"][1] - 1 .<= λ_raw .<= templates["λ"][end] + 1)
-    s = interp1d(λ_raw[good], s[good], templates["λ"])
-    s ./= nanmaximum(s)
-    templates["gascell"] = s
-    τ0 = gascell.τ_bounds[1] + 0.55 * (gascell.τ_bounds[2] - gascell.τ_bounds[1])
-    for i in eachindex(data)
-        params[i]["τ_gascell"] = (value=τ0, lower_bound=gascell.τ_bounds[1], upper_bound=gascell.τ_bounds[1])
-    end
+    return gas_spec
+end
+
+
+function get_initial_params!(params::Parameters, gascell::GasCell, data::DataFrame)
+    τ0 = get_initial_value(gascell.τ_bounds)
+    params["τ_gascell"] = (value=τ0, bounds=gascell.τ_bounds)
 end

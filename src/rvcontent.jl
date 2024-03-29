@@ -1,36 +1,30 @@
 export compute_rv_content
 
-function compute_rv_content(model::SpectralForwardModel, params::Parameters; snr::Real=1)
+function compute_rv_content(model::SpectralForwardModel, data::DataFrame, params::Parameters; peak_snr::Union{Real, Nothing}=1)
 
     # Data wave grid
-    data_λ = build(model.λsolution, model.templates, params, data)
-
-    # Need mean of data spec for scaling
-    data_spec_mean = nanmean(data["spec"])
-
-    # Model wave grid
-    λhr = model.templates["λ"]
+    data_λ = build(model.λsolution, params, data)
 
     # Star spec on model data wave grid
-    star_spec = build(model.star, model.templates, params, data)
+    star_spec = build(model.star, model.λ, params, data)
 
     # Convolve stellar spec
     if !isnothing(model.lsf)
-        star_spec .= convolve_spectrum(model.lsf, model.templates, params, star_spec, data)
+        star_spec .= convolve_spectrum(model.lsf, star_spec, model.λ, params, data)[1]
     end
     
     # Interpolate star spec onto data grid
-    star_spec = interp1d(λhr, star_spec, data_λ, left=NaN, right=NaN, method="cubic")
+    star_spec = interp1d(model.λ, star_spec, data_λ, extrapolate=false)
 
     # Gas cell spec on model wave grid for kth observation
     if !isnothing(model.gascell)
-        gas_spec = build(model.gascell, model.templates, params, data)
+        gas_spec = build(model.gascell, model.λ, params, data)
         if !isnothing(model.lsf)
-            gas_spec .= convolve_spectrum(model.lsf, model.templates, params, gas_spec, data)
+            gas_spec .= convolve_spectrum(model.lsf, gas_spec, model.λ, params, data)[1]
         end
         
         # Interpolate gas cell spec onto data grid
-        gas_spec = interp1d(λhr, gas_spec, data_λ, left=:const, right=:const, method="cubic")
+        gas_spec = interp1d(model.λ, gas_spec, data_λ, extrapolate=true)
     
     else
         gas_spec = nothing
@@ -38,13 +32,13 @@ function compute_rv_content(model::SpectralForwardModel, params::Parameters; snr
 
     # Telluric spec on model wave grid for kth observation
     if !isnothing(model.tellurics)
-        tell_spec = build(model.tellurics, model.templates, params, data)
+        tell_spec = build(model.tellurics, model.λ, params, data)
         if !isnothing(model.lsf)
-            tell_spec .= convolve_spectrum(model.lsf, model.templates, params, tell_spec, data)
+            tell_spec .= convolve_spectrum(model.lsf, tell_spec, model.λ, params, data)[1]
         end
 
         # Interpolate telluric spec onto data grid
-        tell_spec = interp1d(λhr, tell_spec, data_λ, left=:const, right=:const, method="cubic")
+        tell_spec = interp1d(model.λ, tell_spec, data_λ, extrapolate=true)
     
     else
         tell_spec = nothing
@@ -74,8 +68,8 @@ function compute_rv_content(model::SpectralForwardModel, params::Parameters; snr
 
     # Continuum
     if !isnothing(model.continuum)
-        continuum = build(model.continuum, model.templates, params, data)
-        continuum = interp1d(model.templates["λ"], continuum, data_λ, left=NaN, right=NaN, method="cubic")
+        continuum = build(model.continuum, model.λ, params, data)
+        continuum = interp1d(model.λ, continuum, data_λ, extrapolate=true)
     end
 
     # Loop over pixels
@@ -86,14 +80,8 @@ function compute_rv_content(model::SpectralForwardModel, params::Parameters; snr
         end
 
         # Skip if this pixel is not used
-        if model.sregion.mask_mode == :λ
-            if !(model.sregion.λrange[1] < data_λ[i] < model.sregion.λrange[2])
-                continue
-            end
-        else
-            if !(data_λ[model.sregion.pixrange[1]] < data_λ[i] < data_λ[model.sregion.pixrange[2]])
-                continue
-            end
+        if !isfinite(data.spec[i])
+            continue
         end
 
         # Stellar flux and derivative
@@ -119,13 +107,8 @@ function compute_rv_content(model::SpectralForwardModel, params::Parameters; snr
             continue
         end
 
-        # Scale to S/N
-        if data_mean_scale
-            Ai /= data_spec_mean
-            dAi_dw_star /= data_spec_mean
-        end
-        Ai *= snr^2
-        dAi_dw_star *= snr^2
+        Ai *= peak_snr^2
+        dAi_dw_star *= peak_snr^2
 
         # Compute stellar rv content
         rvc_per_pix_star[i] = SPEED_OF_LIGHT_MPS * sqrt(Ai) / (data_λ[i] * abs(dAi_dw_star))
@@ -144,20 +127,14 @@ function compute_rv_content(model::SpectralForwardModel, params::Parameters; snr
                 dAi_dw_gas *= continuum[i]
             end
 
-            # Rescaling
-            if data_mean_scale
-                dAi_dw_gas /= data_spec_mean
-            end
-
             # Scale to S/N
-            dAi_dw_gas *= snr^2
+            dAi_dw_gas *= peak_snr^2
 
             # Compute gas cell rv content
             rvc_per_pix_gas[i] = SPEED_OF_LIGHT_MPS * sqrt(Ai) / (data_λ[i] * abs(dAi_dw_gas))
         end
     end
 
-    
     # Full RV Content per pixel
     if !isnothing(model.gascell)
         rvc_per_pix = sqrt.(rvc_per_pix_star.^2 .+ rvc_per_pix_gas.^2)

@@ -1,22 +1,38 @@
 
-export GaussHermiteChunkedLSF
+export GaussHermiteLSF
 
 
-struct GaussHermiteChunkedLSF
+struct GaussHermiteLSF
+    λkernel::Vector{Float64}
     degλ::Int
     degh::Int
-    n_chunks::Int
-    σ_bounds::Vector{Float64}
-    coeff_bounds::Vector{Float64}
+    knots_poly::Union{Vector{Float64}, Nothing}
+    chunks_convolve::Union{Vector{NTuple{2, Float64}}, Nothing}
+    n_pad::Int
+    σ_bounds::NTuple{2, Float64}
+    coeff_bounds::NTuple{2, Float64}
 end
 
-GaussHermiteChunkedLSF(;degλ::Int=0, degh::Int=0, n_chunks::Int=1, σ_bounds::Vector{<:Real}, coeff_bounds::Vector{<:Real}) = GaussHermiteChunkedLSF(degλ, degh, n_chunks, Float64.(σ_bounds), Float64.(coeff_bounds))
 
-function build(lsf::GaussHermiteChunkedLSF, templates::Dict{String, <:Any}, params::Parameters, data::DataFrame)
-    coeffs = fill(NaN, lsf.n_chunks, lsf.degh+1)
-    #@infiltrate
+function GaussHermiteLSF(;λ::Vector{Float64}, λ_range::NTuple{2, <:Real}, degλ::Int=0, degh::Int=0, n_chunks::Int=1, σ_bounds::NTuple{2, <:Real}, coeff_bounds::NTuple{2, <:Real})
+    δλ = nanmedian(diff(λ))
+    λkernel = get_lsfkernel_λgrid(σ_bounds[2] * 2.355, δλ)
+    if n_chunks == 1
+        n_pad = 0
+        chunks_convolve = nothing
+        knots_poly = nothing
+    else
+        chunks_convolve, n_pad = get_lsf_chunks(λ, λkernel, λ_range, n_chunks)
+        knots_poly = collect(range(λ_range[1], λ_range[2], length=lsf.degλ+1))
+    end
+    return GaussHermiteLSF(λkernel, degλ, degh, chunks_poly, chunks_convolve, n_pad, Float64.(σ_bounds), Float64.(coeff_bounds))
+end
+
+
+function build(lsf::GaussHermiteLSF, λ::Vector{<:Real}, params::Parameters, data::DataFrame)
+    coeffs = fill(NaN, lsf.n_chunks, lsf.degh + 1)
     if lsf.n_chunks > 1
-        xc = templates["λ"][Int.(round.(nanmean.(templates["lsf_chunks_convolve"])))]
+        xc = λ[Int.(round.(nanmean.(templates["lsf_chunks_convolve"])))]
     end
     for k=0:lsf.degh
         y = [params["a_$(i)_$k"] for i=1:lsf.degλ+1]
@@ -35,7 +51,7 @@ function build(lsf::GaussHermiteChunkedLSF, templates::Dict{String, <:Any}, para
 end
 
 
-function build(lsf::GaussHermiteChunkedLSF, coeffs::Vector{<:Real}, λlsf::AbstractVector{<:Real}; zero_centroid::Bool=lsf.degh > 0)
+function build(lsf::GaussHermiteLSF, coeffs::Vector{<:Real}, λlsf::Vector{<:Real}; zero_centroid::Bool=lsf.degh > 0)
     σ = coeffs[1]
     herm = gauss_hermite(λlsf ./ σ, lsf.degh)
     kernel = herm[:, 1]
@@ -54,14 +70,14 @@ function build(lsf::GaussHermiteChunkedLSF, coeffs::Vector{<:Real}, λlsf::Abstr
 end
 
 
-function initialize!(lsf::GaussHermiteChunkedLSF, templates::Dict{String, <:Any}, params::Vector{Parameters}, data::Vector{DataFrame})
-    δλ = nanmedian(diff(templates["λ"]))
-    templates["λlsf"] = get_lsfkernel_λgrid(lsf.σ_bounds[2] * 2.355, δλ)
+function get_initial_params!(lsf::GaussHermiteLSF, params::Parameters, λ::Vector{<:Real}, data::DataFrame)
     templates["lsf_chunks_convolve"], templates["lsf_distrust"] = generate_chunks(lsf, templates["λ"], data)
     λi, λf = get_data_λ_bounds(data)
     λi -= 0.2
     λf += 0.2
-    templates["lsf_chunks_poly"] = collect(range(λi, λf, length=lsf.degλ+1))
+    if lsf.degλ > 0
+        templates["lsf_chunks_poly"] = collect(range(λi, λf, length=lsf.degλ+1))
+    end
     a0 = nanmean(lsf.σ_bounds)
     ak = nanmean(lsf.coeff_bounds)
     if ak == 0 && lsf.coeff_bounds[1] != lsf.coeff_bounds[2]
@@ -79,24 +95,24 @@ function initialize!(lsf::GaussHermiteChunkedLSF, templates::Dict{String, <:Any}
     end
 end
 
-function generate_chunks(lsf::GaussHermiteChunkedLSF, λ, data)
-    λi, λf = get_data_λ_bounds(data)
+function get_lsf_chunks(λ::Vector{<:Real}, λkernel::Vector{<:Real}, λ_range::NTuple{2, <:Real}, n_chunks::Int)
+    λi, λf = λ_range
     λi -= 0.2
     λf += 0.2
     xi, xf = nanargmin(abs.(λ .- λi)), nanargmin(abs.(λ .- λf))
     nx = xf - xi + 1
-    δλ = λ[3] - λ[2]
-    Δλ = 10 * lsf.σ_bounds[2]
-    n_distrust = Int(ceil(Δλ / δλ / 2))
-    chunks = Tuple{Int, Int}[]
-    chunk_overlap = Int(round(2.5 * n_distrust))
-    chunk_width = Int(round(nx / lsf.n_chunks + chunk_overlap))
+    δλ = nanmedian(diff(λ))
+    Δλ = λkernel[end] - λkernel[1]
+    n_pad = Int(ceil(Δλ / δλ / 2))
+    chunks = NTuple{2, Int}[]
+    chunk_overlap = Int(round(2.5 * n_pad))
+    chunk_width = Int(round(nx / n_chunks + chunk_overlap))
     push!(chunks, (xi, Int(round(min(xi + chunk_width, xf)))))
     if chunks[1][2] == xf
-        return chunks, 0
+        return chunks
     end
     for i=2:nx
-	_xi = chunks[i-1][2] - chunk_overlap
+	    _xi = chunks[i-1][2] - chunk_overlap
         _xf = Int(floor(min(_xi + chunk_width, xf)))
         push!(chunks, (_xi, _xf))
         if _xf == xf
@@ -111,28 +127,34 @@ function generate_chunks(lsf::GaussHermiteChunkedLSF, λ, data)
     end
     chunks[1] = (1, chunks[1][2])
     chunks[end] = (chunks[end][1], length(λ))
-    return chunks, n_distrust
+    return chunks, n_pad
 end
 
-function convolve_spectrum(lsf::GaussHermiteChunkedLSF, model_spec::AbstractVector{<:Real}, templates::Dict{String, <:Any}, params::Parameters, data::DataFrame)
-    kernels = build(lsf, templates, params, data)
+function convolve_spectrum(lsf::GaussHermiteLSF, model_spec::AbstractVector{<:Real}, params::Parameters, data::DataFrame)
+    kernels = build(lsf, params, data)
     model_specc = fill(NaN, length(model_spec), lsf.n_chunks)
-    for j=1:lsf.n_chunks
-        xi, xf = templates["lsf_chunks_convolve"][j]
-        model_specc[xi:xf, j] .= convolve1d(view(model_spec, xi:xf), kernels[j])
-        k1 = xi + templates["lsf_distrust"] - 1
-        k2 = xf - templates["lsf_distrust"] + 1
-        model_specc[1:k1, j] .= NaN
-        model_specc[k2:end, j] .= NaN
+    for i=1:lsf.n_chunks
+        xi, xf = lsf.chunks_convolve[i]
+        model_specc[xi:xf, i] .= convolve1d(view(model_spec, xi:xf), kernels[i])
+        k1 = xi + lsf.n_pad - 1
+        k2 = xf - lsf.n_pad + 1
+        model_specc[1:k1, i] .= NaN
+        model_specc[k2:end, i] .= NaN
     end
     model_specc = nanmean(model_specc, dim=2)
     return model_specc, kernels
 end
 
 
-function check_positive(lsf::GaussHermiteChunkedLSF, kernels::Vector{<:Vector{<:Real}})
+function check_positive(lsf::GaussHermiteLSF, kernels::Vector{<:Vector{<:Real}})
     if lsf.degh > 0
-        return all(all.((x) -> x .> 0, kernels))
+        for k in kernels
+            for kk in k
+                if kk < 0
+                    return false
+                end
+            end
+        end
     else
         return true
     end

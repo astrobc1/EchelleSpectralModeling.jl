@@ -1,3 +1,4 @@
+
 function convolve1d(x::AbstractVector{<:Real}, k::AbstractVector{<:Real})
     nx = length(x)
     nk = length(k)
@@ -67,13 +68,4 @@ function toy_convolve(λ, spec; R=100_000)
     kernel = get_toy_kernel(λ, R)
     specc = convolve1d(spec, kernel)
     return specc
-end
-
-
-convolve_spectrum(lsf::Nothing, model_spec::AbstractVector{<:Real}, templates::Dict{String, <:Any}, params::Parameters, data::DataFrame) = model_spec
-
-function convolve_spectrum(lsf::Any, model_spec::AbstractVector{<:Real}, templates::Dict{String, <:Any}, params::Parameters, data::DataFrame)
-    kernel = build(lsf, templates, params, data)
-    model_specc = convolve1d(model_spec, kernel)
-    return model_specc, kernel
 end

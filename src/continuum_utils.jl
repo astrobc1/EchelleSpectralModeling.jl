@@ -1,4 +1,3 @@
-export estimate_continuum
 
 function estimate_continuum(x::AbstractVector{<:Real}, spec::Vector{<:Real}; width::Real, deg::Int)
     spec_smooth = quantile_filter1d(spec, width=5, q=0.5)

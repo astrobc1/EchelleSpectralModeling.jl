@@ -8,10 +8,10 @@ function augment_stellar_template!(
     )
 
     # Unpack the current high res stellar template
-    star_spec = model.templates["star"]
+    star_spec = isnothing(model.star.template) ? ones(length(model.λ)) : model.star.template
 
     # Get coherent residuals
-    _, residuals_mat, weights_mat = get_coherent_residuals(model, data, opt_results; upsample=true, remove_contaminants)
+    λ_coherent, residuals_mat, weights_mat = get_coherent_residuals(model, data, opt_results; upsample=true, remove_contaminants)
 
     # Sync
     bad = findall(@. ~isfinite(residuals_mat) || (weights_mat <= 0) || ~isfinite(weights_mat))
@@ -64,10 +64,7 @@ function augment_stellar_template!(
     clamp!(star_spec_new, 1E-5, max_val)
 
     # Update
-    model.templates["star"] = star_spec_new
-
-    # Return
-    return nothing
+    model.star.template = star_spec_new
 
 end
 
@@ -79,10 +76,10 @@ function get_coherent_residuals(
 
     # Coherent wavelength grid
     if upsample
-        λ_coherent = model.templates["λ"]
+        λ_coherent = model.λ
     else
         k, _ = get_best_rms(opt_results)
-        λ_coherent = build(model.λsolution, model.templates, opt_results[k].pbest, data[k])
+        λ_coherent = build(model.λsolution, model.λ, opt_results[k].pbest, data[k])
     end
 
     # Coherent wavelength grid size
@@ -94,10 +91,10 @@ function get_coherent_residuals(
     weights_mat = zeros(nx, n_spec)
 
     # Median RV
-    if !isnothing(model.star.filename)
-        rvμ = nanmedian([!isnothing(r) ? r.pbest["vel_star"] : NaN for r in opt_results])
-    else
+    if model.star.from_flat
         rvμ = 0
+    else
+        rvμ = nanmedian([!isnothing(r) ? r.pbest["vel_star"] : NaN for r in opt_results])
     end
 
     # Loop over spectra
@@ -132,14 +129,14 @@ function get_coherent_residuals(
 
         # Doppler shift low res wavelength grid
         bc_vel = metadata(data[i], "bc_vel")
-        zstar = rvμ / SPEED_OF_LIGHT_MPS
-        zbc = bc_vel / SPEED_OF_LIGHT_MPS
-        tstar = sqrt((1 + zstar) / (1 - zstar))
-        tbc = sqrt((1 + zbc) / (1 - zbc))
+        βstar = rvμ / SPEED_OF_LIGHT_MPS
+        βbc = bc_vel / SPEED_OF_LIGHT_MPS
+        tstar = sqrt((1 + βstar) / (1 - βstar))
+        tbc = sqrt((1 + βbc) / (1 - βbc))
         λ_star_rest_lr = @. data_λ * tbc / tstar
 
         # Interpolate onto High res grid
-        residuals_mat[:, i] .= interp1d(λ_star_rest_lr, residuals_lr, λ_coherent, extrapolate=false)
+        residuals_mat[:, i] .= interp1d(λ_star_rest_lr, residuals_lr, λ_coherent, extrapolate=true)
 
         # Initialize a mask
         mask = ones(length(data[i].spec))
@@ -150,9 +147,8 @@ function get_coherent_residuals(
         snrs = quantile_filter(data[i].spec ./ data[i].specerr, window=5)
         weights_lr = mask .* snrs.^2
 
-        # Sanity check weights
-        bad = findall(.~isfinite.(weights_lr))
-        weights_lr[bad] .= 0
+        # Nan -> 0
+        weights_lr[.~isfinite.(weights_lr)] .= 0
 
         # Interpolate onto high res grid
         weights_mat[:, i] .= LinearInterpolation(λ_star_rest_lr, weights_lr, extrapolate=false)(λ_coherent)

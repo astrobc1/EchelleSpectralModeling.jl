@@ -1,51 +1,52 @@
-export TAPASTellurics
+export TAPASTellurics, read_tapas
 
 struct TAPASTellurics
-    filename::String
-    vel_bounds::Vector{Float64}
-    τ_water_bounds::Vector{Float64}
-    τ_dry_bounds::Vector{Float64}
+    templates::@NamedTuple{water::Vector{Float64}, dry::Vector{Float64}}
+    vel_bounds::NTuple{2, Float64}
+    τ_water_bounds::NTuple{2, Float64}
+    τ_dry_bounds::NTuple{2, Float64}
 end
 
-function TAPASTellurics(;filename::String, vel_bounds::Vector{<:Real}=[0, 0], τ_water_bounds::Vector{<:Real}=[1, 1], τ_dry_bounds::Vector{<:Real}=[1, 1])
-    return TAPASTellurics(filename, Float64.(vel_bounds), Float64.(τ_water_bounds), Float64.(τ_dry_bounds))
-end
 
-function build(::TAPASTellurics, templates::Dict{String, <:Any}, params::Parameters, data::DataFrame)
-    s = templates["tell_water"] .^ params["τ_water"] .* templates["tell_dry"] .^ params["τ_dry"]
+TAPASTellurics(templates::@NamedTuple{water::Vector{Float64}, dry::Vector{Float64}}; vel_bounds::Tuple{<:Real, <:Real}=(0, 0), τ_water_bounds::Tuple{<:Real, <:Real}=(1, 1), τ_dry_bounds::Tuple{<:Real, <:Real}=(1, 1)) = TAPASTellurics(templates, Float64.(vel_bounds), Float64.(τ_water_bounds), Float64.(τ_dry_bounds))
+
+
+function build(tellurics::TAPASTellurics, λ::AbstractVector{<:Real}, params::Parameters, data::DataFrame)
+    s = tellurics.templates.water .^ params["τ_water"] .* tellurics.templates.dry .^ params["τ_dry"]
     vel = params["vel_tell"]
     if vel != 0
-        λ′ = templates["λ"] .* (1 .+ vel ./ SPEED_OF_LIGHT_MPS)
-        s = interp1d(λ′, s, templates["λ"]; extrapolate=true)
+        λ′ = @. λ * (1 + vel / SPEED_OF_LIGHT_MPS)
+        s = interp1d(λ′, s, λ; extrapolate=false)
     end
     return s
 end
 
-function initialize!(tellurics::TAPASTellurics, templates::Dict{String, <:Any}, params::Vector{Parameters}, data::Vector{DataFrame})
-    file = jldopen(tellurics.filename)
+
+function read_tapas(filename::String, λ_out::AbstractVector{<:Real}; q::Union{Real, Nothing}=1)
+    println("Reading $filename")
+    file = jldopen(filename)
     λ_raw = file["wave"]
-    good = findall(templates["λ"][1] - 1 .<= λ_raw .<= templates["λ"][end] + 1)
-    s = interp1d(λ_raw[good], file["water"][good], templates["λ"], extrapolate=false)
-    s ./= nanmaximum(s)
-    templates["tell_water"] = s
-    s = ones(length(templates["λ"]))
+    good = findall(@. λ_out[1] - 1 <= λ_raw <= λ_out[end] + 1)
+    water = interp1d(λ_raw[good], file["water"][good], λ_out, extrapolate=false)
+    dry = ones(length(λ_out))
     for key in keys(file)
         if key ∉ ("water", "wave")
-            s .*= interp1d(λ_raw[good], file[key][good], templates["λ"], extrapolate=false)
+            dry .*= interp1d(λ_raw[good], file[key][good], λ_out, extrapolate=false)
         end
     end
-    s ./= nanmaximum(s)
-    templates["tell_dry"] = s
     close(file)
-    vel0 = nanmean(tellurics.vel_bounds)
-    if vel0 == 0 && tellurics.vel_bounds[2] != tellurics.vel_bounds[1]
-        vel0 = tellurics.vel_bounds[1] + 0.51 * (tellurics.vel_bounds[2] - tellurics.vel_bounds[1])
+    if !isnothing(q)
+        water ./= nanquantile(water, q)
+        dry ./= nanquantile(dry, q)
     end
-    τ_water0 = nanmean(tellurics.τ_water_bounds)
-    τ_dry0 = nanmean(tellurics.τ_dry_bounds)
-    for i in eachindex(data)
-        params[i]["vel_tell"] = (value=vel0, lower_bound=tellurics.vel_bounds[1], upper_bound=tellurics.vel_bounds[2])
-        params[i]["τ_water"] = (value=τ_water0, lower_bound=tellurics.τ_water_bounds[1], upper_bound=tellurics.τ_water_bounds[2])
-        params[i]["τ_dry"] = (value=τ_dry0, lower_bound=tellurics.τ_dry_bounds[1], upper_bound=tellurics.τ_dry_bounds[2])
-    end
+    return (;water, dry)
+end
+
+function get_initial_params!(params::Parameters, tellurics::TAPASTellurics, data::DataFrame)
+    vel0 = get_initial_value(tellurics.vel_bounds)
+    τ_water0 = get_initial_value(tellurics.τ_water_bounds)
+    τ_dry0 = get_initial_value(tellurics.τ_dry_bounds)
+    params["vel_tell"] = (value=vel0, bounds=tellurics.vel_bounds)
+    params["τ_water"] = (value=τ_water0, bounds=tellurics.τ_water_bounds)
+    params["τ_dry"] = (value=τ_dry0, bounds=tellurics.τ_dry_bounds)
 end

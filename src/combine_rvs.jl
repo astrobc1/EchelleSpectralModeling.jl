@@ -6,7 +6,7 @@ function combine_rvs(
         weights::Matrix{Float64},
         indices::Vector{<:AbstractVector{Int}},
         rverrs::Union{Nothing, Matrix{Float64}}=nothing;
-        n_iterations::Int=10, nσ::Real=5
+        max_iterations::Int=10, nσ::Real=5
     )
     rvs = copy(rvs)
     weights = copy(weights)
@@ -17,7 +17,7 @@ function combine_rvs(
     rvs[bad] .= NaN
     weights[bad] .= 0
     rvs_single_out, unc_single_out, t_binned_out, rvs_binned_out, unc_binned_out = combine_relative_rvs(bjds, rvs, weights, indices, rverrs)
-    for i=1:n_iterations
+    for i=1:max_iterations
         println("Combining RVs, Iteration $i")
         rvs_single_out, unc_single_out, t_binned_out, rvs_binned_out, unc_binned_out = combine_relative_rvs(bjds, rvs, weights, indices, rverrs)
         rvsa = align_chunks(rvs, weights)
@@ -186,4 +186,13 @@ function bin_jds(jds::Vector{Float64}; sep::Real=0.5, utc_offset::Union{Int, Not
     end
 
     return jds_binned, indices_binned
+end
+
+function weighted_mean(x, w)
+    good = findall(isfinite.(x) .&& isfinite.(w) .&& (w .> 0))
+    if length(good) == 0
+        return NaN
+    else
+        return @views sum(x[good] .* w[good]) ./ sum(w[good])
+    end
 end
