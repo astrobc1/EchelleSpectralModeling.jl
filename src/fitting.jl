@@ -26,14 +26,21 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
     # Loss func wrapper
     loss_func = (x) -> begin
         ptest.values .= x
-        _, y, lsf_kernel = build(model, ptest, data)
-        if !check_positive(model.lsf, lsf_kernel)
+        try
+            _, y, lsf_kernel = build(model, ptest, data)
+            if !check_positive(model.lsf, lsf_kernel)
+                return Inf
+            end
+            residuals = data.spec .- y
+            loss = redchi2loss(residuals, data.specerr; mask_worst, mask_edges, n_params=n_varied_params)
+            return loss
+        catch e
+            #@warn "Loss function return non finite value with parameters:\n$(ptest)"
             return Inf
         end
-        residuals = data.spec .- y
-        loss = redchi2loss(residuals, data.specerr; mask_worst, mask_edges, n_params=n_varied_params)
-        return loss
     end
+
+    #Main.infiltrate(@__MODULE__, Base.@locals, @__FILE__, @__LINE__)
 
     # Fit
     nm_result = IterativeNelderMead.optimize(loss_func, params.values;
@@ -58,7 +65,6 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
         return y[lsq_fitting_inds]
     end
     wt = 1 ./ data.specerr[lsq_fitting_inds].^2
-    #lsq_result = LsqFit.curve_fit(model_func, lsq_fitting_inds, data.spec[lsq_fitting_inds], wt, pbest.values[varied_inds], lower=lbv, upper=ubv, maxIter=0)
     lsq_result = LsqFit.curve_fit(model_func, lsq_fitting_inds, data.spec[lsq_fitting_inds], pbest.values[varied_inds], lower=lbv, upper=ubv, maxIter=0)
 
     # Set errors
@@ -104,7 +110,7 @@ function fit_spectra(
             println("$(r.pbest)")
 
         catch e
-           @error "Could not fit $(basename(metadata(d, "filename")))" exception=(e, catch_backtrace())
+            @error "Could not fit $(basename(metadata(d, "filename")))" exception=(e, catch_backtrace())
         end
 
         # Plot
@@ -203,6 +209,7 @@ function redchi2loss(
     return redχ²
 
 end
+
 
 function rmsloss(
         residuals::AbstractArray{<:Real}, weights::Union{AbstractArray{<:Real}, Nothing}=nothing;

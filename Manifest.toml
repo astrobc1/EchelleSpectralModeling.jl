@@ -2,7 +2,7 @@
 
 julia_version = "1.10.2"
 manifest_format = "2.0"
-project_hash = "63a04d0e6851dfa2e36514c1b13266d498694ca0"
+project_hash = "cb64e16c814feb5e8166b68eb785c0bd109d250f"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -424,12 +424,6 @@ deps = ["CatIndices", "ComputationalResources", "DataStructures", "FFTViews", "F
 git-tree-sha1 = "432ae2b430a18c58eb7eca9ef8d0f2db90bc749c"
 uuid = "6a3955dd-da59-5b1f-98d4-e7296123deb5"
 version = "0.7.8"
-
-[[deps.Infiltrator]]
-deps = ["InteractiveUtils", "Markdown", "REPL", "UUIDs"]
-git-tree-sha1 = "838a8df6dd9ce18565fac062f6346b0a1fca5609"
-uuid = "5903a43b-9cc3-4c30-8d17-598619ec4e9b"
-version = "1.7.0"
 
 [[deps.InlineStrings]]
 deps = ["Parsers"]

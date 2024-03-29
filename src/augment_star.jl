@@ -42,7 +42,7 @@ function augment_stellar_template!(
 
     # Smooth, convert to model pixels
     if !isnothing(smooth_width) && smooth_width > 0
-        width = Int(round(smooth_width * model.oversample))
+        width = Int(round(smooth_width))
         if !isodd(width)
             width += 1
         end
@@ -79,7 +79,7 @@ function get_coherent_residuals(
         λ_coherent = model.λ
     else
         k, _ = get_best_rms(opt_results)
-        λ_coherent = build(model.λsolution, model.λ, opt_results[k].pbest, data[k])
+        λ_coherent = build(model.λsolution, opt_results[k].pbest, data[k])
     end
 
     # Coherent wavelength grid size
@@ -166,6 +166,6 @@ end
 
 function get_best_rms(opt_results::Vector)
     rmss = [!isnothing(r) ? r.rms : NaN for r in opt_results]
-    k = nanargminimum(rmss)
+    k = nanargmin(rmss)
     return k, rmss[k]
 end

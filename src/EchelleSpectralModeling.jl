@@ -13,7 +13,6 @@ using OrderedCollections
 using Distributed
 using Polynomials
 using StatsBase, Statistics
-using Infiltrator
 
 using IterativeNelderMead, Echelle
 
