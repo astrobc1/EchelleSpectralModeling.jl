@@ -83,7 +83,7 @@ end
 
 function fit_spectrum_wrapper(
         data::DataFrame, model::SpectralForwardModel, params::Parameters, iteration::Int;
-        fitting_kwargs::NamedTuple,
+        plots::Bool=true, fitting_kwargs::NamedTuple,
     )
 
     # Try to fit
@@ -133,17 +133,17 @@ function fit_spectra(
     # Parallel fitting
     if parallelize
         opt_results = pmap(zip(data, params0)) do (d, p0)
-            fit_spectrum_wrapper(d, model, p0, iteration; fitting_kwargs)
+            fit_spectrum_wrapper(d, model, p0, iteration; plots, fitting_kwargs)
         end
     else
         opt_results = map(zip(data, params0)) do (d, p0)
-            fit_spectrum_wrapper(d, model, p0, iteration; fitting_kwargs)
+            fit_spectrum_wrapper(d, model, p0, iteration; plots, fitting_kwargs)
         end
     end
 
     # Return all results
     return opt_results
-    
+
 end
 
 
