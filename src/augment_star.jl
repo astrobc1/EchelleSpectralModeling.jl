@@ -42,7 +42,7 @@ function augment_stellar_template!(
 
     # Smooth, convert to model pixels
     if !isnothing(smooth_width) && smooth_width > 0
-        oversample_estim = nanmedian(diff(model.λ)) / nanmedian(diff(data[1].λ))
+        oversample_estim = nanmedian(diff(data[1].λ)) / nanmedian(diff(model.λ))
         width = Int(round(smooth_width * oversample_estim))
         if !isodd(width)
             width += 1
