@@ -35,6 +35,10 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
             loss = redchi2loss(residuals, data.specerr; mask_worst, mask_edges, n_params=n_varied_params)
             return loss
         catch e
+            #Main.infiltrate(@__MODULE__, Base.@locals, @__FILE__, @__LINE__)
+            if e isa InterruptException
+                error("Hit InterruptException")
+            end
             return Inf
         end
     end
@@ -104,7 +108,11 @@ function fit_spectrum_wrapper(
         println("$(r.pbest)")
 
     catch e
-        @error "Could not fit $(basename(metadata(data, "filename")))" exception=(e, catch_backtrace())
+        if !(e isa InterruptException)
+            @warn "Could not fit $(basename(metadata(data, "filename")))" exception=(e, catch_backtrace())
+        else
+            error("Hit InterruptException")
+        end
     end
 
     # Plot
@@ -113,7 +121,11 @@ function fit_spectrum_wrapper(
             try
                 plot_spectral_fit(data, model, r, iteration, output_path)
             catch e
-                @error "Could not plot fit for $(basename(metadata(data, "filename")))" exception=(e, catch_backtrace())
+                if !(e isa InterruptException)
+                    @warn "Could not plot fit for $(basename(metadata(data, "filename")))" exception=(e, catch_backtrace())
+                else
+                    error("Hit InterruptException")
+                end
             end
         end
     end
@@ -127,11 +139,11 @@ end
 function fit_spectra(
         data::Vector{DataFrame}, model::SpectralForwardModel, params0::Vector{Parameters},
         iteration::Int, output_path::String;
-        parallelize::Bool=true, plots::Bool=true, fitting_kwargs::NamedTuple=(;),
+        parallel::Bool=true, plots::Bool=true, fitting_kwargs::NamedTuple=(;),
     )
 
     # Parallel fitting
-    if parallelize
+    if parallel
         opt_results = pmap(zip(data, params0)) do (d, p0)
             fit_spectrum_wrapper(d, model, p0, iteration, output_path; plots, fitting_kwargs)
         end

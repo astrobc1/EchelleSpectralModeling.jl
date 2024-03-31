@@ -3,7 +3,7 @@ export drive
 function drive(
         data::Vector{DataFrame}, model::SpectralForwardModel, params0::Vector{Parameters};
         n_iterations::Int, output_path::String,
-        parallelize::Bool=true,
+        parallel::Bool=true,
         fitting_kwargs::NamedTuple=(;),
         augmenting_kwargs::NamedTuple=(;),
     )
@@ -40,7 +40,7 @@ function drive(
         ti = time()
 
         # Fit all spectra
-        opt_results[iteration] = fit_spectra(data, model, params_best, iteration, output_path; plots=true, fitting_kwargs)
+        opt_results[iteration] = fit_spectra(data, model, params_best, iteration, output_path; plots=true, parallel, fitting_kwargs)
 
         # Update best fit params
         params_best = [!isnothing(r) ? r.pbest : nothing for r in opt_results[iteration]]

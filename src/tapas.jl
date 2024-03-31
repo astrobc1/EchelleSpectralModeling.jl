@@ -43,10 +43,14 @@ function read_tapas(filename::String, λ_out::AbstractVector{<:Real}; q::Union{R
 end
 
 function get_initial_params!(params::Parameters, tellurics::TAPASTellurics, data::DataFrame)
+    
     vel0 = get_initial_value(tellurics.vel_bounds)
-    τ_water0 = get_initial_value(tellurics.τ_water_bounds)
-    τ_dry0 = get_initial_value(tellurics.τ_dry_bounds)
     params["vel_tell"] = (value=vel0, bounds=tellurics.vel_bounds)
+
+    τ_water0 = get_initial_value(tellurics.τ_water_bounds)
     params["τ_water"] = (value=τ_water0, bounds=tellurics.τ_water_bounds)
+
+    τ_dry0 = get_initial_value(tellurics.τ_dry_bounds)
     params["τ_dry"] = (value=τ_dry0, bounds=tellurics.τ_dry_bounds)
+
 end
