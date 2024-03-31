@@ -61,7 +61,7 @@ function read_btsettl(filename::String, λ_out::Union{AbstractVector{<:Real}, No
 
     # Parse template params
     l = read_nth_line(filename, 2)
-    teff = parse(Float64, split(split(l, "= ")[2], "K")[1])
+    teff = parse(Int, split(split(l, "= ")[2], "K")[1])
 
     l = read_nth_line(filename, 3)
     logg = parse(Float64, split(split(l, "= ")[2], "log(")[1])
