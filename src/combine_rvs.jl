@@ -1,6 +1,7 @@
 export bin_rvs_single_order, bin_jds, combine_rvs, align_chunks
 
-
+"""
+"""
 function combine_rvs(
         bjds::Vector{Float64}, rvs::Matrix{Float64},
         weights::Matrix{Float64},
