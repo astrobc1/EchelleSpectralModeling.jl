@@ -1,6 +1,14 @@
 export bin_rvs_single_order, bin_jds, combine_rvs, align_chunks
 
 """
+    combine_rvs(
+            bjds::Vector{Float64}, rvs::Matrix{Float64},
+            weights::Matrix{Float64},
+            indices::Vector{<:AbstractVector{Int}},
+            rverrs::Union{Nothing, Matrix{Float64}}=nothing;
+            max_iterations::Int=10, nσ::Real=5
+        )
+Function to combine RVs
 """
 function combine_rvs(
         bjds::Vector{Float64}, rvs::Matrix{Float64},
@@ -19,7 +27,7 @@ function combine_rvs(
     weights[bad] .= 0
     rvs_single_out, unc_single_out, t_binned_out, rvs_binned_out, unc_binned_out = combine_relative_rvs(bjds, rvs, weights, indices, rverrs)
     for i=1:max_iterations
-        println("Combining RVs, Iteration $i")
+        println("Combining RVs, Iteration $(i)")
         rvs_single_out, unc_single_out, t_binned_out, rvs_binned_out, unc_binned_out = combine_relative_rvs(bjds, rvs, weights, indices, rverrs)
         rvsa = align_chunks(rvs, weights)
         for j=1:n_bins
