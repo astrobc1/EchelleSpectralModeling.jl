@@ -38,9 +38,10 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
         catch e
             #Main.infiltrate(@__MODULE__, Base.@locals, @__FILE__, @__LINE__)
             if e isa InterruptException
-                error("Hit InterruptException")
+                error("")
+            else
+                return Inf
             end
-            return Inf
         end
     end
 
@@ -110,10 +111,10 @@ function fit_spectrum_wrapper(
         println("$(r.pbest)")
 
     catch e
-        if !(e isa InterruptException)
-            @warn "Could not fit $(basename(metadata(data, "filename")))" exception=(e, catch_backtrace())
+        if e isa InterruptException
+            error("")
         else
-            error("Hit InterruptException")
+            @warn "Could not fit $(basename(metadata(data, "filename")))" exception=(e, catch_backtrace())
         end
     end
 
@@ -123,10 +124,10 @@ function fit_spectrum_wrapper(
             try
                 plot_spectral_fit(data, model, r, iteration, output_path)
             catch e
-                if !(e isa InterruptException)
-                    @warn "Could not plot fit for $(basename(metadata(data, "filename")))" exception=(e, catch_backtrace())
+                if e isa InterruptException
+                    error("")
                 else
-                    error("Hit InterruptException")
+                    @warn "Could not plot fit for $(basename(metadata(data, "filename")))" exception=(e, catch_backtrace())
                 end
             end
         end
