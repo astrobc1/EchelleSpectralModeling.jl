@@ -80,7 +80,7 @@ function get_initial_params!(params::Parameters, lsf::GaussHermiteLSF, data::Dat
     for i=1:degλ+1
         params["a_$(i)_0"] = (value=a0, bounds=lsf.σ_bounds)
         for k=1:lsf.degh
-            params["a_$(j)_$k"] = (value=ak, bounds=lsf.coeff_bounds)
+            params["a_$(i)_$k"] = (value=ak, bounds=lsf.coeff_bounds)
         end
     end
 end
