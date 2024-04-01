@@ -1,3 +1,4 @@
+
 export fit_spectrum, fit_spectra
 
 function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Parameters, iteration::Int; mask_worst::Int=0, mask_edges::Int=10)
@@ -84,6 +85,7 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
     return opt_result
     
 end
+
 
 function fit_spectrum_wrapper(
         data::DataFrame, model::SpectralForwardModel, params::Parameters, iteration::Int, output_path::String;
@@ -277,4 +279,34 @@ function rmsloss(
 
     # Return
     return rms
+end
+
+
+function param2bounded(x, lo, hi)
+    has_lo = isfinite(lo)
+    has_hi = isfinite(hi)
+    if has_lo && has_hi
+        return lo + (sin(x) + 1) * ((hi - lo) / 2)
+    elseif has_lo
+        return lo - 1 + sqrt(x^2 + 1)
+    elseif has_hi
+        return hi + 1 - sqrt(x^2 + 1)
+    else
+        return x
+    end
+end
+
+
+function param2unbounded(x, lo, hi)
+    has_lo = isfinite(lo)
+    has_hi = isfinite(hi)
+    if has_lo && has_hi
+        return asin(2 * (x - lo) / (hi - lo) - 1)
+    elseif has_lo
+        return sqrt((x - lo + 1)^2 - 1)
+    elseif has_hi
+        return sqrt((hi - x + 1)^2 - 1)
+    else
+        return x
+    end
 end
