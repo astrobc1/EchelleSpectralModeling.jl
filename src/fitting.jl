@@ -29,7 +29,7 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
         ptest.values .= x
         try
             _, y, lsf_kernel = build(model, ptest, data)
-            Main.infiltrate(@__MODULE__, Base.@locals, @__FILE__, @__LINE__)
+            #Main.infiltrate(@__MODULE__, Base.@locals, @__FILE__, @__LINE__)
             if !check_positive(model.lsf, lsf_kernel)
                 return Inf
             end
