@@ -57,6 +57,9 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
     # Set new vals
     pbest.values .= nm_result.pbest
 
+    # Clamp params since NM bounds aren't guaranteed
+    pbest.values .= clamp(pbest.values, lb, ub)
+
     # Best model and residuals
     _, model_best, _ = build(model, pbest, data)
     residuals_best = data.spec .- model_best
@@ -71,7 +74,7 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
         return y[lsq_fitting_inds]
     end
     wt = 1 ./ data.specerr[lsq_fitting_inds].^2
-    lsq_result = LsqFit.curve_fit(model_func, lsq_fitting_inds, data.spec[lsq_fitting_inds], pbest.values[varied_inds], lower=lbv, upper=ubv, maxIter=0)
+    lsq_result = LsqFit.curve_fit(model_func, lsq_fitting_inds, data.spec[lsq_fitting_inds], pbest.values[varied_inds], maxIter=0)
 
     # Set errors
     pbest.errors[varied_inds] .= get_stderrors(lsq_result)
