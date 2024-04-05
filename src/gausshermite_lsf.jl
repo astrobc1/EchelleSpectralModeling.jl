@@ -148,6 +148,7 @@ function check_positive(lsf::GaussHermiteLSF, kernels::Vector{<:Vector{<:Real}})
                 end
             end
         end
+        return true
     else
         return true
     end
