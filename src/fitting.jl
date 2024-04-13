@@ -9,8 +9,10 @@ function fit_spectrum(data::DataFrame, model::SpectralForwardModel, params::Para
     varied_inds = findall(params.vary)
     n_varied_params = length(varied_inds)
     pnames = collect(keys(params.indices))
+    p0 = params.values
     lb = getindex.(params.bounds, 1)
     ub = getindex.(params.bounds, 2)
+    p0v = params.values[varied_inds]
     lbv = getindex.(params.bounds[varied_inds], 1)
     ubv = getindex.(params.bounds[varied_inds], 2)
 
